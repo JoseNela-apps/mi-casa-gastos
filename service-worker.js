@@ -1,5 +1,5 @@
-/* Mi Casa · Gastos — V5.3 auto-update */
-const VERSION = "2026.10.02-53";
+/* Mi Casa · Gastos — V6 auto-update */
+const VERSION = "2026.10.02-60-premium";
 const CACHE = `mi-casa-${VERSION}`;
 const APP_SHELL = ["./","./index.html","./styles.css","./app.js","./manifest.json","./update-notifier.js","./icons/icon.svg"];
 

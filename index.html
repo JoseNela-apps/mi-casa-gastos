@@ -85,65 +85,82 @@
       <div class="top-actions"><button class="lang-btn" id="languageToggle" type="button" title="Cambiar idioma">ES / EN</button><button class="icon-btn" id="profileBtn" title="Mi perfil">☺</button><button class="primary" id="newExpenseBtn">＋ Nuevo gasto</button></div>
     </header>
 
-    <div id="homePage" class="page active family-home">
-      <section class="family-status">
-        <div class="family-status-copy">
-          <span class="eyebrow light">ESTADO DE MI CASA</span>
-          <h2>Todo lo importante de la familia, en un solo lugar.</h2>
-          <p id="familyStatusMessage">Tu resumen financiero del mes está listo.</p>
-          <div class="family-status-total"><span>Gastos del mes</span><strong id="monthTotal">$0.00</strong><small id="movementCount">0 movimientos</small></div>
-          <div id="monthTrend" class="trend-pill">Sin comparación aún</div>
-        </div>
-        <div class="family-status-side">
-          <div class="family-avatar-stack" id="familyAvatarStack"></div>
-          <div class="family-mini-stat"><span>Te deben</span><b id="owedToMe">$0.00</b><small>Balance personal</small></div>
-          <div class="family-mini-stat"><span>Tú debes</span><b id="iOwe">$0.00</b><small>Balance personal</small></div>
-          <div class="family-budget-card"><div><span>Presupuesto familiar</span><b id="budgetUsed">—</b></div><div class="budget-progress"><i id="budgetProgress"></i></div></div>
-        </div>
-        <div class="family-glow one"></div><div class="family-glow two"></div>
+    <div id="homePage" class="page active premium-home">
+      <section class="mobile-welcome">
+        <div><span class="eyebrow">FAMILY FINANCE</span><h2 id="mobileGreeting">Mi Casa</h2></div>
+        <button class="mobile-profile-orb" id="mobileProfileBtn" type="button"><span id="mobileProfileAvatar">☺</span></button>
       </section>
 
-      <section class="quick-row family-actions">
-        <button id="quickExpense"><span class="quick-icon">＋</span><b>Agregar gasto</b><small>Registra una compra o factura</small></button>
-        <button data-jump="balances"><span class="quick-icon">⇄</span><b>Saldar</b><small>Organiza quién paga a quién</small></button>
-        <button id="quickBudget"><span class="quick-icon">◔</span><b>Presupuestos</b><small>Cuida los límites de la casa</small></button>
-        <button data-jump="month"><span class="quick-icon">▣</span><b>Mes</b><small>Calendario, reporte y cierre</small></button>
+      <section class="finance-hero">
+        <div class="finance-hero-top">
+          <div><span class="hero-kicker">TOTAL MONTHLY SPENDING</span><strong id="monthTotal">$0.00</strong><div class="hero-trend" id="monthTrend">Sin comparación aún</div></div>
+          <button class="hero-arrow" data-jump="month" aria-label="Ver mes">↗</button>
+        </div>
+        <div class="hero-chart-wrap">
+          <div class="hero-chart-labels"><span>$</span><span id="heroChartMax"></span></div>
+          <div id="heroSparkChart" class="hero-spark-chart"></div>
+        </div>
+        <div class="family-avatar-row">
+          <div id="familyAvatarStack" class="premium-avatar-stack"></div>
+          <div class="family-avatar-copy"><b id="familyCount">Mi Casa</b><small id="movementCount">0 movimientos</small></div>
+        </div>
+        <div class="hero-balance-grid">
+          <div><span>Te deben</span><b id="owedToMe">$0.00</b></div>
+          <div><span>Tú debes</span><b id="iOwe">$0.00</b></div>
+          <div><span>Presupuesto</span><b id="budgetUsed">—</b></div>
+        </div>
+        <div class="hero-aurora a"></div><div class="hero-aurora b"></div>
       </section>
 
-      <div class="family-dashboard-grid">
-        <section class="card family-people-card">
-          <div class="section-head compact"><div><span class="eyebrow">NUESTRA CASA</span><h2>La familia este mes</h2></div><button class="owner-only" data-jump="members">Administrar</button></div>
-          <div id="peopleStrip" class="people-strip family-people"></div>
+      <section class="premium-actions">
+        <button id="quickExpense"><span class="action-orb blue">＋</span><b>Gasto</b><small>Agregar</small></button>
+        <button data-jump="balances"><span class="action-orb mint">⇄</span><b>Saldar</b><small>Pendientes</small></button>
+        <button id="quickBudget"><span class="action-orb lilac">◔</span><b>Presupuesto</b><small>Límites</small></button>
+        <button data-jump="month"><span class="action-orb peach">▣</span><b>Reporte</b><small>Este mes</small></button>
+      </section>
+
+      <section class="ai-insight-card">
+        <div class="ai-badge">✦</div>
+        <div><span>MI CASA INSIGHT</span><b id="smartInsight">Construyendo tu resumen familiar…</b><small id="smartInsightSub">Tus datos se actualizan automáticamente.</small></div>
+        <button data-jump="activity">→</button>
+      </section>
+
+      <section class="premium-section">
+        <div class="premium-section-head"><div><span class="eyebrow">FAMILY SPACES</span><h2>En qué vive Mi Casa</h2></div><button id="editBudgetsBtn">Ver todo</button></div>
+        <div id="categoryList" class="space-carousel"></div>
+      </section>
+
+      <section class="premium-section">
+        <div class="premium-section-head"><div><span class="eyebrow">THIS WEEK</span><h2>Ritmo de gastos</h2></div><span class="week-total" id="weekTotal">$0</span></div>
+        <div class="weekly-card">
+          <div id="weeklyBars" class="weekly-bars"></div>
+          <div class="weekly-legend"><span><i class="dot good"></i>Dentro del ritmo</span><span><i class="dot high"></i>Día alto</span></div>
+        </div>
+      </section>
+
+      <div class="premium-two-col">
+        <section class="premium-section balance-zone">
+          <div class="premium-section-head"><div><span class="eyebrow">FAMILY BALANCE</span><h2>Quién paga a quién</h2></div><button data-jump="balances">Ver todos</button></div>
+          <div id="settlementPreview" class="balance-cards"></div>
         </section>
-        <section class="card family-budget-summary">
-          <div class="section-head compact"><div><span class="eyebrow">PRESUPUESTO</span><h2>En qué estamos gastando</h2></div><button id="editBudgetsBtn">Ver límites</button></div>
-          <div id="categoryList"></div>
+        <section class="premium-section people-zone">
+          <div class="premium-section-head"><div><span class="eyebrow">OUR FAMILY</span><h2>Perfiles</h2></div><button class="owner-only" data-jump="members">Administrar</button></div>
+          <div id="peopleStrip" class="premium-people"></div>
         </section>
       </div>
 
-      <section class="insights-card family-insights">
-        <div class="section-head compact"><div><span class="eyebrow">PARA TI</span><h2>Lo importante de Mi Casa</h2></div></div>
-        <div id="insightsGrid" class="insights-grid"></div>
+      <section class="premium-section activity-zone">
+        <div class="premium-section-head"><div><span class="eyebrow">RECENT</span><h2>Actividad reciente</h2></div><button data-jump="activity">Ver todo</button></div>
+        <div id="recentList" class="feed premium-feed"></div>
       </section>
 
-      <div class="home-grid family-lower-grid">
-        <section class="card">
-          <div class="section-head compact"><div><span class="eyebrow">PENDIENTES</span><h2>Quién paga a quién</h2></div><button data-jump="balances">Ver todos</button></div>
-          <div id="settlementPreview"></div>
-        </section>
-        <section class="card family-next-card">
-          <div class="section-head compact"><div><span class="eyebrow">RESUMEN</span><h2>La casa al día</h2></div></div>
-          <div id="familyPulse" class="family-pulse"></div>
-        </section>
-      </div>
-
-      <section class="activity-section">
-        <div class="section-head"><div><span class="eyebrow">HISTORIA DE LA CASA</span><h2>Actividad reciente</h2></div><button data-jump="activity">Ver todo</button></div>
-        <div id="recentList" class="feed family-feed"></div>
-      </section>
+      <div id="insightsGrid" class="hidden"></div>
+      <div id="familyPulse" class="hidden"></div>
+      <div class="budget-progress hidden"><i id="budgetProgress"></i></div>
+      <p id="familyStatusMessage" class="hidden"></p>
     </div>
 
-    <div id="activityPage" class="page">
+    <div id="activityPage" class="page premium-subpage activity-premium">
       <div class="page-card">
         <div class="section-head"><div><span class="eyebrow">MOVIMIENTOS</span><h2>Actividad</h2></div><button class="primary small" id="activityAdd">＋ Agregar</button></div>
         <div class="filter-row">
@@ -154,7 +171,7 @@
       </div>
     </div>
 
-    <div id="balancesPage" class="page">
+    <div id="balancesPage" class="page premium-subpage balances-premium">
       <div class="page-card">
         <div class="section-head"><div><span class="eyebrow">BALANCES</span><h2>Deudas simplificadas</h2></div></div>
         <p class="muted">Reducimos los cruces para dejar la menor cantidad posible de transferencias.</p>
@@ -166,7 +183,7 @@
       </div>
     </div>
 
-    <div id="monthPage" class="page">
+    <div id="monthPage" class="page premium-subpage month-premium">
       <div class="statement">
         <span class="eyebrow">ESTADO DE CUENTA</span><h2 id="statementMonth"></h2>
         <strong id="statementTotal">$0.00</strong><p id="statementMeta">0 gastos · Mes abierto</p>
@@ -185,7 +202,7 @@
       <div class="page-card"><h2>Resumen por persona</h2><div id="monthPeople"></div></div>
     </div>
 
-    <div id="membersPage" class="page">
+    <div id="membersPage" class="page premium-subpage members-premium">
       <div class="page-card">
         <div class="section-head"><div><span class="eyebrow">MI CASA</span><h2>Miembros</h2></div><button class="primary small owner-only" id="inviteBtn">＋ Agregar miembro</button></div>
         <p class="muted">Toca un miembro para abrir su perfil financiero.</p>
@@ -193,7 +210,7 @@
       </div>
     </div>
 
-    <div id="adminPage" class="page">
+    <div id="adminPage" class="page premium-subpage admin-premium">
       <div class="page-card">
         <div class="section-head"><div><span class="eyebrow">OWNER</span><h2>Administración</h2></div></div>
         <p class="muted">Controla acceso, recuperación de cuenta y estructura del hogar.</p>
@@ -257,6 +274,30 @@
     <label>Email <span class="optional">(para darle acceso)</span><input id="memberEmail" type="email" placeholder="persona@email.com"></label>
     <p class="info-note">El email debe coincidir exactamente con el que la persona usará para activar su acceso.</p>
     <button class="primary wide" type="submit">Agregar / invitar</button>
+  </form>
+</aside>
+
+
+<aside id="profileEditSheet" class="sheet small-sheet hidden">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn profileEditCancel">Cancelar</button><b>Personalizar perfil</b><button id="saveProfileTop" class="text-btn accent">Guardar</button></div>
+  <form id="profileEditForm">
+    <input id="profileEditMemberId" type="hidden">
+    <div class="profile-editor-preview">
+      <div id="profileAvatarPreview" class="avatar profile-preview-avatar">?</div>
+      <div><b id="profileEditName">Miembro</b><small>Elige una foto, avatar y color.</small></div>
+    </div>
+    <label class="profile-photo-input">Foto de perfil <span class="optional">(opcional)</span><input id="profilePhotoInput" type="file" accept="image/*"></label>
+    <div class="avatar-presets-label">Avatares</div>
+    <div id="avatarPresetPicker" class="avatar-preset-picker">
+      <button type="button" data-preset="initials">AB</button><button type="button" data-preset="🌿">🌿</button><button type="button" data-preset="🌸">🌸</button><button type="button" data-preset="☀️">☀️</button><button type="button" data-preset="🌙">🌙</button><button type="button" data-preset="🦋">🦋</button><button type="button" data-preset="⭐">⭐</button><button type="button" data-preset="🏡">🏡</button>
+    </div>
+    <div class="avatar-presets-label">Color personal</div>
+    <div id="profileColorPicker" class="profile-color-picker">
+      <button type="button" data-color="#4a90e2"></button><button type="button" data-color="#55b78a"></button><button type="button" data-color="#8b7bd8"></button><button type="button" data-color="#ef9b68"></button><button type="button" data-color="#e77e9f"></button><button type="button" data-color="#4fa8b8"></button>
+    </div>
+    <p class="info-note">Las fotos se comprimen antes de guardarse para mantener Mi Casa ligera.</p>
+    <button class="primary wide" type="submit">Guardar perfil</button>
   </form>
 </aside>
 

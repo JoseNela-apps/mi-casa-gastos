@@ -8,7 +8,7 @@ export const firebaseConfig = {
 };
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc, collection, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc,updateDoc, collection, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
 const fb=initializeApp(firebaseConfig),auth=getAuth(fb),db=getFirestore(fb);
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -26,6 +26,11 @@ let me=null,householdId=null,household=null,members=[],expenses=[],settlements=[
 const isOwner=()=>!!(me&&household&&household.ownerId===me.uid);
 const myMember=()=>members.find(m=>m.authUid===me?.uid)||members.find(m=>m.id===me?.uid)||null;
 const member=id=>members.find(m=>m.id===id)||{id,name:"Miembro"};
+const PROFILE_COLORS=["#4a90e2","#55b78a","#8b7bd8","#ef9b68","#e77e9f","#4fa8b8"];
+function memberAvatar(m,size=""){m=m||{};const style=`${m.accentColor?`--avatar-accent:${m.accentColor};`:""}`;if(m.avatarData)return `<span class="avatar ${size} has-photo" style="${style}"><img src="${m.avatarData}" alt="${esc(m.name||"Perfil")}"></span>`;if(m.avatarPreset&&m.avatarPreset!=="initials")return `<span class="avatar ${size} preset-avatar" style="${style}">${esc(m.avatarPreset)}</span>`;return `<span class="avatar ${size}" style="${style}">${esc(initials(m.name))}</span>`}
+function categoryIcon(c){return {Casa:"⌂",Comida:"●",Servicios:"ϟ",Teléfono:"▣",Transporte:"◆",Salud:"＋",Suscripciones:"↻",Otros:"•"}[c]||"•"}
+function categoryClass(c){return {Casa:"home",Comida:"food",Servicios:"utilities",Teléfono:"phone",Transporte:"transport",Salud:"health",Suscripciones:"subs",Otros:"other"}[c]||"other"}
+
 
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400)}
 function authError(err){const map={"auth/email-already-in-use":"Ese email ya tiene una cuenta.","auth/invalid-credential":"Email o contraseña incorrectos.","auth/weak-password":"La contraseña necesita al menos 6 caracteres.","auth/invalid-email":"Revisa el email."};$("#authError").textContent=map[err.code]||err.message||"Ocurrió un error."}
@@ -92,7 +97,10 @@ function renderAll(){
   if(!householdId)return;
   const mex=monthExpenses(),total=mex.reduce((s,e)=>s+Number(e.amount||0),0),{paid,share,balances}=calc(),mine=myMember(),myBal=mine?balances[mine.id]||0:0;
   $("#monthTotal").textContent=money(total);$("#movementCount").textContent=`${mex.length} ${mex.length===1?"movimiento":"movimientos"}`;$("#owedToMe").textContent=money(Math.max(0,myBal));$("#iOwe").textContent=money(Math.max(0,-myBal));
-  const familyStack=$("#familyAvatarStack");if(familyStack)familyStack.innerHTML=members.slice(0,6).map(m=>`<span class="stack-avatar" title="${esc(m.name)}">${esc(initials(m.name))}</span>`).join("");
+  const familyStack=$("#familyAvatarStack");if(familyStack)familyStack.innerHTML=members.slice(0,6).map(m=>`<button class="hero-member-avatar" data-person="${esc(m.id)}" title="${esc(m.name)}">${memberAvatar(m,"hero-avatar")}</button>`).join("");
+  $("#familyCount")&&($("#familyCount").textContent=`${members.length} personas en Mi Casa`);
+  const mobileAvatar=$("#mobileProfileAvatar"),mmNow=myMember();if(mobileAvatar&&mmNow)mobileAvatar.innerHTML=memberAvatar(mmNow,"nav-avatar");
+  renderPremiumCharts(total,prevTotal);
   const status=$("#familyStatusMessage");if(status)status.textContent=total?`${members.length} personas · ${mex.length} movimientos registrados este mes.`:`${members.length} personas listas para organizar los gastos de la casa.`;
   const pulse=$("#familyPulse");if(pulse){const planNow=settlementPlan(),tbNow=totalBudget(),remain=tbNow-total;pulse.innerHTML=`<div class="pulse-row"><span>◎</span><div><b>${planNow.length?planNow.length+" pagos por resolver":"Todo saldado"}</b><small>${planNow.length?"Revisa Saldos para mantener la casa al día.":"No hay transferencias pendientes."}</small></div></div><div class="pulse-row"><span>⌂</span><div><b>${tbNow?(remain>=0?money(remain)+" disponibles":money(Math.abs(remain))+" sobre presupuesto"):"Presupuesto sin configurar"}</b><small>${tbNow?"Según los límites definidos para este mes.":"Puedes definir límites por categoría."}</small></div></div><div class="pulse-row"><span>▧</span><div><b>${expenses.filter(e=>((e.attachments&&e.attachments.length)||e.receiptData)).length} gastos con comprobante</b><small>Las fotos y PDFs pueden abrirse desde cada gasto.</small></div></div>`}
   $("#statementTotal").textContent=money(total);
@@ -103,7 +111,8 @@ function renderAll(){
   const tb=totalBudget(),pct=tb?Math.min(100,total/tb*100):0;$("#budgetUsed").textContent=tb?`${Math.round(pct)}% · ${money(total)} / ${money(tb)}`:"Sin presupuesto";$("#budgetProgress").style.width=`${pct}%`;
 
   renderInsights(total,prevTotal,paid,balances);
-  $("#peopleStrip").innerHTML=members.map(m=>`<button class="person-card" data-person="${esc(m.id)}"><div class="avatar">${esc(initials(m.name))}</div><b>${esc(m.name)}</b><small>Pagó ${money(paid[m.id]||0)}</small><small class="${balances[m.id]>0.005?"balance-positive":balances[m.id]<-.005?"balance-negative":""}">${balances[m.id]>0.005?"Recibe "+money(balances[m.id]):balances[m.id]<-.005?"Debe "+money(-balances[m.id]):"Saldado"}</small></button>`).join("");
+  $("#peopleStrip").innerHTML=members.map(m=>`<button class="premium-person" data-person="${esc(m.id)}">${memberAvatar(m,"lg")}<span><b>${esc(m.name)}</b><small>Pagó ${money(paid[m.id]||0)}</small></span><em class="${balances[m.id]>0.005?"positive":balances[m.id]<-.005?"negative":"neutral"}">${balances[m.id]>0.005?"+"+money(balances[m.id]):balances[m.id]<-.005?"−"+money(-balances[m.id]):"✓"}</em></button>`).join("");
+  $$(".premium-person,.hero-member-avatar").forEach(b=>b.onclick=()=>openMemberDetail(b.dataset.person));
   $$(".person-card").forEach(b=>b.onclick=()=>openMemberDetail(b.dataset.person));
 
   const plan=settlementPlan();$("#settlementPreview").innerHTML=plan.length?plan.slice(0,3).map(settleHTML).join(""):`<div class="empty"><b>Todo saldado ✓</b>No hay pagos pendientes.</div>`;
@@ -119,6 +128,22 @@ function renderAll(){
   fillMemberControls();
 }
 
+
+function renderPremiumCharts(total,prevTotal){
+  const ex=monthExpenses(), daily={};ex.forEach(e=>{const d=Number(String(e.date||"").slice(-2));if(d)daily[d]=(daily[d]||0)+Number(e.amount||0)});
+  const vals=Array.from({length:31},(_,i)=>daily[i+1]||0),max=Math.max(1,...vals),w=620,h=118;
+  const pts=vals.map((v,i)=>`${(i/(vals.length-1))*w},${h-(v/max)*(h-20)-8}`).join(" ");
+  const chart=$("#heroSparkChart");if(chart)chart.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#77d9a7" stop-opacity=".36"/><stop offset="100%" stop-color="#77d9a7" stop-opacity="0"/></linearGradient></defs><polygon points="0,${h} ${pts} ${w},${h}" fill="url(#areaFill)"/><polyline points="${pts}" fill="none" stroke="#49a978" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const maxLabel=$("#heroChartMax");if(maxLabel)maxLabel.textContent=money(max);
+  const now=new Date(),week=[0,0,0,0,0,0,0];ex.forEach(e=>{const d=new Date((e.date||today())+"T12:00:00");const diff=Math.floor((now-d)/(86400000));if(diff>=0&&diff<7)week[6-diff]+=Number(e.amount||0)});
+  const wm=Math.max(1,...week),names=["L","M","M","J","V","S","D"],avg=week.reduce((a,b)=>a+b,0)/7;
+  const bars=$("#weeklyBars");if(bars)bars.innerHTML=week.map((v,i)=>`<div class="week-col"><div class="week-track"><i class="${v>avg*1.45&&v>0?"high":""}" style="height:${Math.max(v?12:3,(v/wm)*100)}%"></i></div><b>${names[i]}</b><small>${v?money(v).replace(".00",""):""}</small></div>`).join("");
+  const wt=$("#weekTotal");if(wt)wt.textContent=money(week.reduce((a,b)=>a+b,0));
+  const cats=catTotals(),top=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0],si=$("#smartInsight"),ss=$("#smartInsightSub");
+  if(si){if(!total){si.textContent="Tu primer insight aparecerá con el primer gasto.";ss.textContent="Mi Casa aprenderá de tus movimientos mensuales."}
+    else if(prevTotal){const diff=total-prevTotal,pct=Math.abs(diff)/(prevTotal||1)*100;si.textContent=`Este mes gastaron ${pct.toFixed(0)}% ${diff<=0?"menos":"más"} que el mes anterior.`;ss.textContent=`Diferencia de ${money(Math.abs(diff))}${top?` · ${top[0]} lidera el gasto.`:""}`}
+    else{si.textContent=top?`${top[0]} es la categoría principal este mes.`:"Tu casa está tomando forma.";ss.textContent=top?`${money(top[1])} registrados en ${top[0]}.`:"Sigue registrando movimientos para ver tendencias."}}
+}
 function renderInsights(total,prevTotal,paid,balances){
   const cats=catTotals(),top=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0],bigPayer=Object.entries(paid).sort((a,b)=>b[1]-a[1])[0],open=settlementPlan().length;
   const items=[
@@ -130,7 +155,7 @@ function renderInsights(total,prevTotal,paid,balances){
 }
 function renderCategories(total){
   const cats=catTotals(),entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
-  $("#categoryList").innerHTML=entries.length?entries.slice(0,6).map(([k,v])=>{const lim=Number(budgets[`${activeMonth}_${k}`]?.limit||0),p=lim?Math.min(100,v/lim*100):total?Math.max(5,v/total*100):0;return `<div class="category-row"><div class="cat-line"><b>${esc(k)}</b><span>${money(v)}${lim?` / ${money(lim)}`:""}</span></div><div class="category-track"><div class="category-fill ${lim&&v>lim?"over":""}" style="width:${p}%"></div></div></div>`}).join(""):`<div class="empty"><b>Sin categorías</b>Agrega tu primer gasto.</div>`;
+  $("#categoryList").innerHTML=entries.length?entries.slice(0,8).map(([k,v])=>{const lim=Number(budgets[`${activeMonth}_${k}`]?.limit||0),p=lim?Math.min(100,v/lim*100):total?Math.max(6,v/total*100):0;return `<article class="space-card ${categoryClass(k)}"><div class="space-icon">${categoryIcon(k)}</div><span>${esc(k)}</span><b>${money(v)}</b><small>${lim?`${Math.round(v/lim*100)}% de ${money(lim)}`:`${Math.round(v/(total||1)*100)}% del mes`}</small><div class="space-wave"><i style="width:${p}%"></i></div></article>`}).join(""):`<div class="empty premium-empty"><b>Tu casa está lista</b>Agrega el primer gasto para ver tus espacios financieros.</div>`;
 }
 function renderActivity(){
   const q=($("#activitySearch")?.value||"").toLowerCase(),cat=$("#activityCategory")?.value||"";
@@ -142,25 +167,26 @@ function renderActivity(){
 $("#activitySearch").addEventListener("input",renderActivity);$("#activityCategory").addEventListener("change",renderActivity);
 
 function renderMembers(paid,share,balances){
-  $("#membersList").innerHTML=members.map(m=>`<button class="member-row clickable-member" data-person="${esc(m.id)}"><div class="avatar">${esc(initials(m.name))}</div><div><b>${esc(m.name)}</b><small>${esc(m.email||"Sin email")} · ${m.authUid?"Activo":m.email?"Pendiente":"Sin acceso"}</small></div><span class="role-pill">${esc(m.role||"member")}</span></button>`).join("");
+  $("#membersList").innerHTML=members.map(m=>`<button class="member-row clickable-member" data-person="${esc(m.id)}">${memberAvatar(m)}<div><b>${esc(m.name)}</b><small>${esc(m.email||"Sin email")} · ${m.authUid?"Activo":m.email?"Pendiente":"Sin acceso"}</small></div><span class="role-pill">${esc(m.role||"member")}</span></button>`).join("");
   $$(".clickable-member").forEach(b=>b.onclick=()=>openMemberDetail(b.dataset.person));
-  $("#adminUsers").innerHTML=isOwner()?members.map(m=>`<div class="member-row admin-user"><div class="avatar">${esc(initials(m.name))}</div><div class="member-main"><b>${esc(m.name)}</b><small>${esc(m.email||"Sin email")} · ${m.authUid?"Activo":m.email?"Pendiente":"Sin acceso"}</small></div><div class="admin-actions">${m.email?`<button class="secondary mini reset-access" data-email="${esc(m.email)}">Restablecer contraseña</button>`:""}${m.authUid!==me.uid?`<button class="danger mini remove-member" data-member="${esc(m.id)}">Eliminar</button>`:""}</div></div>`).join(""):`<div class="empty"><b>Solo el Owner</b>Esta sección está reservada para el administrador.</div>`;
+  $("#adminUsers").innerHTML=isOwner()?members.map(m=>`<div class="member-row admin-user">${memberAvatar(m)}<div class="member-main"><b>${esc(m.name)}</b><small>${esc(m.email||"Sin email")} · ${m.authUid?"Activo":m.email?"Pendiente":"Sin acceso"}</small></div><div class="admin-actions">${m.email?`<button class="secondary mini reset-access" data-email="${esc(m.email)}">Restablecer contraseña</button>`:""}${m.authUid!==me.uid?`<button class="danger mini remove-member" data-member="${esc(m.id)}">Eliminar</button>`:""}</div></div>`).join(""):`<div class="empty"><b>Solo el Owner</b>Esta sección está reservada para el administrador.</div>`;
   $$(".reset-access").forEach(b=>b.onclick=async()=>{try{await sendPasswordResetEmail(auth,b.dataset.email);toast("Enlace enviado ✓")}catch(e){toast("No se pudo enviar.")}});
   $$(".remove-member").forEach(b=>b.onclick=async()=>{if(!confirm("¿Quitar este miembro del hogar?"))return;try{await deleteDoc(doc(db,"households",householdId,"members",b.dataset.member));toast("Miembro eliminado")}catch(e){toast("No se pudo eliminar.")}});
-  $("#monthPeople").innerHTML=members.map(m=>`<div class="settle-row"><div class="settle-person"><div class="avatar">${esc(initials(m.name))}</div><div><b>${esc(m.name)}</b><small>Pagó ${money(paid[m.id]||0)}</small></div></div><span></span><div class="settle-person right"><div><b>${balances[m.id]>=0?"Recibe":"Debe"} ${money(Math.abs(balances[m.id]||0))}</b><small>Parte ${money(share[m.id]||0)}</small></div></div></div>`).join("");
+  $("#monthPeople").innerHTML=members.map(m=>`<div class="settle-row"><div class="settle-person">${memberAvatar(m)}<div><b>${esc(m.name)}</b><small>Pagó ${money(paid[m.id]||0)}</small></div></div><span></span><div class="settle-person right"><div><b>${balances[m.id]>=0?"Recibe":"Debe"} ${money(Math.abs(balances[m.id]||0))}</b><small>Parte ${money(share[m.id]||0)}</small></div></div></div>`).join("");
 }
 function openMemberDetail(id){
-  const m=member(id),{paid,share,balances}=calc(),mine=monthExpenses().filter(e=>e.payerId===id||(e.participantIds||[]).includes(id)).slice(0,5);
-  $("#memberDetailContent").innerHTML=`<div class="profile-hero"><div class="avatar xl">${esc(initials(m.name))}</div><div><h2>${esc(m.name)}</h2><p>${esc(m.email||"Miembro de la casa")}</p></div></div><div class="profile-stats"><div><small>Pagó</small><b>${money(paid[id]||0)}</b></div><div><small>Le corresponde</small><b>${money(share[id]||0)}</b></div><div><small>Balance</small><b>${balances[id]>=0?"+":""}${money(balances[id]||0)}</b></div></div><h3>Movimientos recientes</h3><div class="feed">${mine.length?mine.map(feedHTML).join(""):`<div class="empty">Sin movimientos este mes.</div>`}</div>`;
+  const m=member(id),{paid,share,balances}=calc(),mine=monthExpenses().filter(e=>e.payerId===id||(e.participantIds||[]).includes(id)).slice(0,5),canEdit=isOwner()||m.authUid===me?.uid;
+  $("#memberDetailContent").innerHTML=`<div class="premium-profile-hero"><div class="profile-cover" style="--profile-accent:${esc(m.accentColor||"#4a90e2")}"></div>${memberAvatar(m,"xl")}<div class="profile-title"><h2>${esc(m.name)}</h2><p>${esc(m.email||"Miembro de Mi Casa")}</p>${canEdit?`<button class="secondary mini edit-profile-btn" data-person="${esc(id)}">✦ Personalizar</button>`:""}</div></div><div class="profile-stats premium"><div><small>Pagó</small><b>${money(paid[id]||0)}</b></div><div><small>Su parte</small><b>${money(share[id]||0)}</b></div><div><small>Balance</small><b class="${balances[id]>=0?"balance-positive":"balance-negative"}">${balances[id]>=0?"+":""}${money(balances[id]||0)}</b></div></div><div class="profile-section-title"><span>ACTIVIDAD</span><h3>Movimientos recientes</h3></div><div class="feed premium-feed">${mine.length?mine.map(feedHTML).join(""):`<div class="empty">Sin movimientos este mes.</div>`}</div>`;
+  $(".edit-profile-btn")?.addEventListener("click",()=>openProfileEditor(id));
   openSheet("#memberDetailSheet");
 }
-function settleHTML(p,withButton=false,i=0){return `<div class="settle-row"><div class="settle-person"><div class="avatar">${esc(initials(member(p.from).name))}</div><div><b>${esc(member(p.from).name)}</b><small>paga</small></div></div><div class="settle-arrow">→<b>${money(p.amount)}</b>${withButton?`<button class="secondary mini mark-paid" data-index="${i}">Marcar pagado</button>`:""}</div><div class="settle-person right"><div><b>${esc(member(p.to).name)}</b><small>recibe</small></div><div class="avatar">${esc(initials(member(p.to).name))}</div></div></div>`}
+function settleHTML(p,withButton=false,i=0){const from=member(p.from),to=member(p.to);return `<div class="premium-settle-card"><div class="settle-face">${memberAvatar(from,"lg")}<b>${esc(from.name)}</b><small>paga</small></div><div class="settle-flow"><span>→</span><strong>${money(p.amount)}</strong>${withButton?`<button class="secondary mini mark-paid" data-index="${i}">Marcar pagado</button>`:""}</div><div class="settle-face">${memberAvatar(to,"lg")}<b>${esc(to.name)}</b><small>recibe</small></div></div>`}
 async function markSettlement(i){const p=settlementPlan()[i];if(!p)return;try{await addDoc(collection(db,"households",householdId,"settlements"),{...p,month:activeMonth,status:"paid",method:"Transferencia",createdBy:me.uid,paidAt:serverTimestamp()});toast("Pago registrado ✓")}catch(e){console.error(e);toast("No se pudo registrar el pago.")}}
-function feedHTML(e){const icons={Casa:"⌂",Comida:"●",Servicios:"⚡",Teléfono:"◫",Transporte:"◆",Salud:"✚",Suscripciones:"↻",Otros:"•"};return `<div class="feed-item" data-id="${esc(e.id)}"><div class="cat-icon">${icons[e.category]||"•"}</div><div class="feed-copy"><b>${esc(e.description)}</b><small>${esc(member(e.payerId).name)} pagó · ${(e.participantIds||[]).length} participantes · ${esc(e.date)}</small></div><div class="feed-amount"><b>${money(e.amount)}</b><small>${esc(e.category||"Otros")}${((e.attachments&&e.attachments.length)||e.receiptName)?" · 📎":""}</small></div></div>`}
+function feedHTML(e){const icons={Casa:"⌂",Comida:"●",Servicios:"⚡",Teléfono:"◫",Transporte:"◆",Salud:"✚",Suscripciones:"↻",Otros:"•"};return `<div class="feed-item" data-id="${esc(e.id)}"><div class="cat-icon ${categoryClass(e.category)}">${icons[e.category]||"•"}</div><div class="feed-copy"><b>${esc(e.description)}</b><small>${esc(member(e.payerId).name)} pagó · ${(e.participantIds||[]).length} participantes · ${esc(e.date)}</small></div><div class="feed-amount"><b>${money(e.amount)}</b><small>${esc(e.category||"Otros")}${((e.attachments&&e.attachments.length)||e.receiptName)?" · 📎":""}</small></div></div>`}
 
 function fillMemberControls(){
   const opts=members.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join("");$("#expensePayer").innerHTML=opts;$("#recurringPayer").innerHTML=opts;
-  $("#participantPicker").innerHTML=members.map(m=>`<button type="button" class="participant selected" data-id="${esc(m.id)}"><span class="avatar">${esc(initials(m.name))}</span>${esc(m.name)}</button>`).join("");
+  $("#participantPicker").innerHTML=members.map(m=>`<button type="button" class="participant selected" data-id="${esc(m.id)}">${memberAvatar(m)}${esc(m.name)}</button>`).join("");
   $$("#participantPicker .participant").forEach(b=>b.onclick=()=>{b.classList.toggle("selected");renderCustomSplitRows();updatePerPerson()});
 }
 function selectedIds(){return $$("#participantPicker .participant.selected").map(x=>x.dataset.id)}
@@ -233,6 +259,30 @@ $("#deleteExpense").onclick=async()=>{const id=$("#expenseId").value;if(!id||!co
 $("#inviteBtn").onclick=()=>{$("#memberForm").reset();openSheet("#memberSheet")};
 $("#memberForm").onsubmit=async e=>{e.preventDefault();if(!isOwner())return;const name=$("#memberName").value.trim(),email=$("#memberEmail").value.trim().toLowerCase();try{const mref=doc(collection(db,"households",householdId,"members"));await setDoc(mref,{name,email:email||null,role:"member",authUid:null,inviteStatus:email?"pending":"none",createdAt:serverTimestamp()});if(email)await setDoc(doc(db,"invites",emailKey(email)),{email,householdId,memberId:mref.id,householdName:household.name||"Mi Casa",invitedBy:me.uid,createdAt:serverTimestamp()});closeSheets();toast(email?"Invitación preparada ✓":"Miembro agregado ✓")}catch(e){console.error(e);toast("No se pudo agregar.")}};
 
+
+let profileDraft={avatarData:null,avatarPreset:"initials",accentColor:"#4a90e2"};
+function openProfileEditor(id){
+  const m=member(id);if(!(isOwner()||m.authUid===me?.uid)){toast("No puedes editar este perfil.");return}
+  profileDraft={avatarData:m.avatarData||null,avatarPreset:m.avatarPreset||"initials",accentColor:m.accentColor||"#4a90e2"};
+  $("#profileEditMemberId").value=id;$("#profileEditName").textContent=m.name;renderProfileDraft(m);openSheet("#profileEditSheet")
+}
+function renderProfileDraft(m=member($("#profileEditMemberId").value)){
+  const fake={...m,...profileDraft};$("#profileAvatarPreview").outerHTML=memberAvatar(fake,"profile-preview-avatar").replace('class="avatar','id="profileAvatarPreview" class="avatar');
+  $$("#avatarPresetPicker button").forEach(b=>b.classList.toggle("selected",b.dataset.preset===profileDraft.avatarPreset&&!profileDraft.avatarData));
+  $$("#profileColorPicker button").forEach(b=>b.classList.toggle("selected",b.dataset.color===profileDraft.accentColor));
+}
+async function compressProfileImage(file){
+  return await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=reject;reader.onload=()=>{const img=new Image();img.onerror=reject;img.onload=()=>{const size=320,c=document.createElement("canvas");c.width=size;c.height=size;const ctx=c.getContext("2d"),s=Math.min(img.width,img.height),sx=(img.width-s)/2,sy=(img.height-s)/2;ctx.drawImage(img,sx,sy,s,s,0,0,size,size);resolve(c.toDataURL("image/jpeg",.76))};img.src=reader.result};reader.readAsDataURL(file)})
+}
+$("#profilePhotoInput")?.addEventListener("change",async e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>8*1024*1024){toast("La foto es demasiado grande.");return}try{profileDraft.avatarData=await compressProfileImage(f);profileDraft.avatarPreset="initials";renderProfileDraft()}catch{toast("No pudimos preparar esa foto.")}});
+$$("#avatarPresetPicker button").forEach(b=>b.onclick=()=>{profileDraft.avatarData=null;profileDraft.avatarPreset=b.dataset.preset;renderProfileDraft()});
+$$("#profileColorPicker button").forEach(b=>{b.style.background=b.dataset.color;b.onclick=()=>{profileDraft.accentColor=b.dataset.color;renderProfileDraft()}});
+async function saveProfileCustomization(){
+  const id=$("#profileEditMemberId").value,m=member(id);if(!(isOwner()||m.authUid===me?.uid))return;
+  try{await updateDoc(doc(db,"households",householdId,"members",id),{avatarData:profileDraft.avatarData||null,avatarPreset:profileDraft.avatarPreset||"initials",accentColor:profileDraft.accentColor||"#4a90e2",profileUpdatedAt:serverTimestamp()});closeSheets();toast("Perfil actualizado ✨")}catch(e){console.error(e);toast("No se pudo guardar. Revisa las reglas de perfil.")}
+}
+$("#profileEditForm")?.addEventListener("submit",e=>{e.preventDefault();saveProfileCustomization()});$("#saveProfileTop")?.addEventListener("click",saveProfileCustomization);$(".profileEditCancel")?.addEventListener("click",closeSheets);
+$("#mobileProfileBtn")?.addEventListener("click",()=>{const mm=myMember();if(mm)openMemberDetail(mm.id)});
 function openBudgets(){if(!isOwner()){toast("Solo el Owner puede cambiar presupuestos.");return}$("#budgetRows").innerHTML=CATS.map(c=>`<label><span>${esc(c)}</span><input class="budget-input" data-cat="${esc(c)}" inputmode="decimal" placeholder="Sin límite" value="${budgets[`${activeMonth}_${c}`]?.limit||""}"></label>`).join("");openSheet("#budgetSheet")}
 $("#quickBudget").onclick=openBudgets;$("#editBudgetsBtn").onclick=openBudgets;$("#saveBudgetsTop").onclick=()=>$("#budgetForm").requestSubmit();
 $("#budgetForm").onsubmit=async e=>{e.preventDefault();try{await Promise.all($$(".budget-input").map(i=>setDoc(doc(db,"households",householdId,"budgets",`${activeMonth}_${i.dataset.cat}`),{month:activeMonth,category:i.dataset.cat,limit:Number(i.value||0),updatedAt:serverTimestamp()},{merge:true})));closeSheets();toast("Presupuestos guardados ✓")}catch(e){console.error(e);toast("No se pudieron guardar.")}};
