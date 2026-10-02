@@ -1,76 +1,170 @@
-const APP_KEY='miCasaGastosV2';
-const DB_NAME='MiCasaAttachments';
-const DB_STORE='files';
-const DEFAULTS={people:['Persona 1','Persona 2','Persona 3','Persona 4','Persona 5','Persona 6'],expenses:[],settlements:[],closedMonths:[]};
-let state=loadState(), splitMode='equal', pendingAttachmentIds=[], expenseFilter='all';
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(n)||0);
-const icons={Supermercado:'🛒',Servicios:'💡',Teléfonos:'📱',Internet:'⌁',Casa:'⌂',Transporte:'🚗',Otro:'•••'};
-const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-const initials=s=>String(s||'?').trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();
-const currentMonthKey=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`};
-const monthKeyFromDate=s=>String(s||'').slice(0,7);
-const monthName=k=>{const [y,m]=k.split('-').map(Number);return new Date(y,m-1,1).toLocaleDateString('es-US',{month:'long',year:'numeric'})};
-function loadState(){try{const v=JSON.parse(localStorage.getItem(APP_KEY));return v?{...structuredClone(DEFAULTS),...v}:structuredClone(DEFAULTS)}catch(e){return JSON.parse(JSON.stringify(DEFAULTS))}}
-function saveState(){localStorage.setItem(APP_KEY,JSON.stringify(state))}
-function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
-function todayISO(){return new Date().toISOString().slice(0,10)}
-function monthExpenses(key=currentMonthKey()){return state.expenses.filter(e=>monthKeyFromDate(e.date)===key)}
-function dbOpen(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE,{keyPath:'id'})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
-async function filePut(file){const db=await dbOpen(),id=crypto.randomUUID();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put({id,name:file.name,type:file.type,size:file.size,blob:file,createdAt:Date.now()});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});return id}
-async function fileGet(id){const db=await dbOpen();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly');const r=tx.objectStore(DB_STORE).get(id);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
-async function fileDelete(id){const db=await dbOpen();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
-function totals(expenses=monthExpenses()){
-  const paid=Array(6).fill(0),share=Array(6).fill(0),cats={};
-  expenses.forEach(e=>{paid[e.payer]+=e.amount;(e.shares||[]).forEach((v,i)=>share[i]+=Number(v)||0);cats[e.category]=(cats[e.category]||0)+e.amount});
-  const key=expenses.length?monthKeyFromDate(expenses[0].date):currentMonthKey(), settlementNet=Array(6).fill(0);
-  state.settlements.filter(s=>s.month===key).forEach(s=>{settlementNet[s.from]+=s.amount;settlementNet[s.to]-=s.amount});
-  const bal=paid.map((v,i)=>v-share[i]-settlementNet[i]);
-  return {paid,share,bal,cats,spent:expenses.reduce((a,e)=>a+e.amount,0),count:expenses.length}
+export const firebaseConfig = {
+  apiKey: "AIzaSyBmyu4QSwuLbVEPfuYozXHLhwTGYr6pQ1U",
+  authDomain: "mi-casa-gastos-ad8db.firebaseapp.com",
+  projectId: "mi-casa-gastos-ad8db",
+  storageBucket: "mi-casa-gastos-ad8db.firebasestorage.app",
+  messagingSenderId: "938411430388",
+  appId: "1:938411430388:web:60e0621370f281fde569a1"
+};
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc, collection, query, orderBy, onSnapshot, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+const fb = initializeApp(firebaseConfig);
+const auth = getAuth(fb);
+const db = getFirestore(fb);
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const money = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(n||0));
+const esc = s => String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+const initials = n => String(n||"?").trim().split(/\s+/).slice(0,2).map(x=>x[0]?.toUpperCase()).join("");
+const today = () => new Date().toISOString().slice(0,10);
+const monthKey = d => (d||today()).slice(0,7);
+const currentMonth = monthKey();
+const monthLabel = (key=currentMonth) => { const [y,m]=key.split("-").map(Number); return new Intl.DateTimeFormat("es-US",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(Date.UTC(y,m-1,1))); };
+let me=null, householdId=null, household=null, members=[], expenses=[], unsubs=[];
+
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2300)}
+function authError(err){ const map={"auth/email-already-in-use":"Ese email ya tiene una cuenta.","auth/invalid-credential":"Email o contraseña incorrectos.","auth/weak-password":"La contraseña necesita al menos 6 caracteres.","auth/invalid-email":"Revisa el email."}; $("#authError").textContent=map[err.code]||err.message||"Ocurrió un error."; }
+function showOnly(id){["authView","setupView","appView"].forEach(x=>$("#"+x).classList.toggle("hidden",x!==id))}
+function clearSubs(){unsubs.forEach(f=>f());unsubs=[]}
+
+$("#loginTab").onclick=()=>{$("#loginTab").classList.add("active");$("#registerTab").classList.remove("active");$("#loginForm").classList.remove("hidden");$("#registerForm").classList.add("hidden");$("#authError").textContent=""}
+$("#registerTab").onclick=()=>{$("#registerTab").classList.add("active");$("#loginTab").classList.remove("active");$("#registerForm").classList.remove("hidden");$("#loginForm").classList.add("hidden");$("#authError").textContent=""}
+$("#loginForm").onsubmit=async e=>{e.preventDefault();$("#authError").textContent="";try{await signInWithEmailAndPassword(auth,$("#loginEmail").value.trim(),$("#loginPassword").value)}catch(err){authError(err)}}
+$("#registerForm").onsubmit=async e=>{e.preventDefault();$("#authError").textContent="";try{const name=$("#registerName").value.trim();const c=await createUserWithEmailAndPassword(auth,$("#registerEmail").value.trim(),$("#registerPassword").value);await updateProfile(c.user,{displayName:name});await setDoc(doc(db,"users",c.user.uid),{name,email:c.user.email,householdId:null,createdAt:serverTimestamp()});}catch(err){authError(err)}}
+$("#setupLogout").onclick=()=>signOut(auth);$("#logoutBtn").onclick=()=>signOut(auth);
+
+onAuthStateChanged(auth, async user=>{
+  clearSubs(); me=user; householdId=null; household=null; members=[]; expenses=[];
+  if(!user){showOnly("authView");return}
+  try{
+    const uref=doc(db,"users",user.uid); let us=await getDoc(uref);
+    if(!us.exists()){await setDoc(uref,{name:user.displayName||user.email.split("@")[0],email:user.email,householdId:null,createdAt:serverTimestamp()});us=await getDoc(uref)}
+    householdId=us.data().householdId||null;
+    if(!householdId){showOnly("setupView");return}
+    startApp();
+  }catch(err){console.error(err);toast("No pudimos cargar tu cuenta.");}
+});
+
+$("#houseForm").onsubmit=async e=>{
+  e.preventDefault(); if(!me)return;
+  const name=$("#houseName").value.trim()||"Mi Casa";
+  try{
+    const href=doc(collection(db,"households"));
+    const batch=writeBatch(db);
+    batch.set(href,{name,ownerId:me.uid,createdAt:serverTimestamp()});
+    batch.set(doc(db,"households",href.id,"members",me.uid),{name:me.displayName||me.email.split("@")[0],email:me.email,role:"owner",authUid:me.uid,createdAt:serverTimestamp()});
+    batch.set(doc(db,"users",me.uid),{name:me.displayName||me.email.split("@")[0],email:me.email,householdId:href.id},{merge:true});
+    await batch.commit(); householdId=href.id; startApp(); toast("Tu hogar está listo ✓");
+  }catch(err){console.error(err);toast("No se pudo crear el hogar.");}
 }
-function settlePlan(expenses=monthExpenses()){
-  const t=totals(expenses),cr=t.bal.map((v,i)=>({i,v})).filter(x=>x.v>.005),db=t.bal.map((v,i)=>({i,v:-v})).filter(x=>x.v<-.005),out=[];let a=0,b=0;
-  while(a<db.length&&b<cr.length){const v=Math.min(db[a].v,cr[b].v);out.push({from:db[a].i,to:cr[b].i,amount:v});db[a].v-=v;cr[b].v-=v;if(db[a].v<.005)a++;if(cr[b].v<.005)b++}
-  return out
+
+async function startApp(){
+  showOnly("appView");
+  const h=await getDoc(doc(db,"households",householdId)); if(!h.exists()){toast("No encontramos el hogar.");return}
+  household={id:h.id,...h.data()};
+  $("#sideHouse").textContent=household.name||"Mi Casa";
+  $("#sideName").textContent=me.displayName||me.email;
+  $("#sideAvatar").textContent=initials(me.displayName||me.email);
+  $("#monthEyebrow").textContent=monthLabel().toUpperCase();
+  $("#statementMonth").textContent=monthLabel().replace(/^./,c=>c.toUpperCase());
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"members"),snap=>{members=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
+  const q=query(collection(db,"households",householdId,"expenses"),orderBy("date","desc"));
+  unsubs.push(onSnapshot(q,snap=>{expenses=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll()},err=>{console.error(err);toast("No pudimos sincronizar los gastos.")}));
 }
-function render(){
-  const key=currentMonthKey(),ex=monthExpenses(key),t=totals(ex);
-  $('#monthLabel').textContent=monthName(key).toUpperCase();
-  $('#heroSpent').textContent=money(t.spent);$('#heroReceive').textContent=money(Math.max(0,t.bal[0]));$('#heroOwe').textContent=money(Math.max(0,-t.bal[0]));$('#heroCount').textContent=`${t.count} movimiento${t.count===1?'':'s'}`;
-  $('#peopleBalance').innerHTML=state.people.map((p,i)=>`<article class="person-card"><div class="avatar">${initials(p)}</div><b>${esc(p)}</b><small>Pagó ${money(t.paid[i])}</small><div class="person-balance ${t.bal[i]>0?'pos':t.bal[i]<0?'neg':''}">${t.bal[i]===0?'Saldado':(t.bal[i]>0?'Recibe ':'Debe ')+money(Math.abs(t.bal[i]))}</div></article>`).join('');
-  const debts=settlePlan(ex);$('#debtsList').innerHTML=debts.length?debts.map(d=>`<div class="list-row"><div class="avatar">${initials(state.people[d.from])}</div><div class="row-main"><b>${esc(state.people[d.from])} → ${esc(state.people[d.to])}</b><small>Debe devolver</small></div><div class="row-money neg">${money(d.amount)}</div></div>`).join(''):`<div class="empty"><b>Todo saldado ✓</b>No hay pagos pendientes.</div>`;
-  const cats=Object.entries(t.cats).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...cats.map(x=>x[1]));$('#categoryList').innerHTML=cats.length?cats.map(([c,v])=>`<div class="category-item"><div class="category-top"><span>${icons[c]||'•'} ${esc(c)}</span><b>${money(v)}</b></div><div class="cat-bar"><i style="width:${Math.max(5,v/max*100)}%"></i></div></div>`).join(''):`<div class="empty"><b>Sin categorías</b>Agrega tu primer gasto.</div>`;
-  const recent=[...ex].sort((a,b)=>b.id-a.id).slice(0,5);$('#recentExpenses').innerHTML=expenseRows(recent);
-  const list=expenseFilter==='month'?monthExpenses():[...state.expenses].sort((a,b)=>new Date(b.date)-new Date(a.date));$('#expensesList').innerHTML=expenseRows(list);wireExpenseButtons();renderSettle(ex);renderPeopleEditor();renderCloseHistory();$('#closeTitle').textContent=`Cerrar ${monthName(key)}`;
+
+function monthExpenses(){return expenses.filter(x=>monthKey(x.date)===currentMonth)}
+function calc(){
+  const paid={},share={}; members.forEach(m=>{paid[m.id]=0;share[m.id]=0});
+  for(const e of monthExpenses()){
+    paid[e.payerId]=(paid[e.payerId]||0)+Number(e.amount||0);
+    const ids=e.participantIds||[]; if(!ids.length)continue;
+    const each=Number(e.amount||0)/ids.length; ids.forEach(id=>share[id]=(share[id]||0)+each);
+  }
+  const balances={};members.forEach(m=>balances[m.id]=(paid[m.id]||0)-(share[m.id]||0));
+  return {paid,share,balances};
 }
-function expenseRows(arr){if(!arr.length)return `<div class="empty"><b>No hay gastos todavía</b>Toca “Nuevo gasto” para comenzar.</div>`;return [...arr].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(e=>`<div class="list-row"><div class="row-icon">${icons[e.category]||'•'}</div><div class="row-main"><b>${esc(e.description)}</b><small>${new Date(e.date+'T00:00:00').toLocaleDateString('es-US',{month:'short',day:'numeric'})} · pagó ${esc(state.people[e.payer])}${(e.attachments||[]).length?` · 📎 ${(e.attachments||[]).length}`:''}</small><div class="row-actions"><button class="tiny-btn" data-edit="${e.id}">Editar</button>${(e.attachments||[]).length?`<button class="tiny-btn" data-files="${e.id}">Adjuntos</button>`:''}</div></div><div class="row-money">${money(e.amount)}</div></div>`).join('')}
-function wireExpenseButtons(){$$('[data-edit]').forEach(b=>b.onclick=()=>openExpenseSheet(Number(b.dataset.edit)));$$('[data-files]').forEach(b=>b.onclick=()=>openExpenseFiles(Number(b.dataset.files)))}
-function renderSettle(ex){const plan=settlePlan(ex);$('#settleSummary').innerHTML=plan.length?plan.map((d,i)=>`<div class="settle-row"><div><b>${esc(state.people[d.from])} → ${esc(state.people[d.to])}</b><small>Pago para saldar ${monthName(currentMonthKey())}</small></div><div class="settle-actions"><span class="settle-amount">${money(d.amount)}</span><button class="settle-btn" data-settle="${i}">Marcar pagado</button></div></div>`).join(''):`<div class="empty"><b>Mes saldado ✓</b>No queda nada por devolver.</div>`;$$('[data-settle]').forEach(b=>b.onclick=()=>{const d=plan[+b.dataset.settle];state.settlements.push({id:Date.now(),month:currentMonthKey(),from:d.from,to:d.to,amount:d.amount,date:todayISO()});saveState();render();toast('Pago marcado como saldado')})}
-function renderPeopleEditor(){$('#peopleEditor').innerHTML=state.people.map((p,i)=>`<label class="person-edit"><div class="avatar">${initials(p)}</div><input data-person="${i}" value="${esc(p)}" aria-label="Nombre persona ${i+1}"></label>`).join('');$$('[data-person]').forEach(inp=>inp.onchange=()=>{const v=inp.value.trim();if(v){state.people[+inp.dataset.person]=v;saveState();render()}})}
-function renderCloseHistory(){const arr=[...state.closedMonths].sort((a,b)=>b.closedAt-a.closedAt);$('#closeHistory').innerHTML=arr.length?arr.map(c=>`<div class="list-row"><div class="row-icon">▣</div><div class="row-main"><b>${monthName(c.month)}</b><small>Cerrado ${new Date(c.closedAt).toLocaleDateString('es-US')} · ${c.expenseCount} gastos</small></div><div class="row-money">${money(c.total)}</div></div>`).join(''):`<div class="empty"><b>No hay cierres todavía</b>Cuando cierres un mes aparecerá aquí.</div>`}
-function showView(v){$$('.view').forEach(x=>x.classList.remove('active'));$('#view-'+v).classList.add('active');$$('.nav-item,.bottom-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));const titles={home:'Resumen',expenses:'Gastos',settle:'Saldar cuentas',close:'Cierre mensual',people:'Personas',settings:'Ajustes'};$('#pageTitle').textContent=titles[v]||'Mi Casa';window.scrollTo({top:0,behavior:'smooth'})}
-$$('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));$$('[data-view-jump]').forEach(b=>b.onclick=()=>showView(b.dataset.viewJump));
-function populateExpenseForm(expense=null){$('#payer').innerHTML=state.people.map((p,i)=>`<option value="${i}">${esc(p)}</option>`).join('');const participants=expense?.participants||state.people.map((_,i)=>i);$('#participantPicker').innerHTML=state.people.map((p,i)=>`<button type="button" class="participant-btn ${participants.includes(i)?'active':''}" data-participant="${i}"><div class="avatar">${initials(p)}</div><small>${esc(p)}</small></button>`).join('');$$('[data-participant]').forEach(b=>b.onclick=()=>{b.classList.toggle('active');updateSplitUI()});$('#expenseId').value=expense?.id||'';$('#amount').value=expense?.amount||'';$('#description').value=expense?.description||'';$('#date').value=expense?.date||todayISO();$('#category').value=expense?.category||'Supermercado';$('#payer').value=expense?.payer??0;$('#notes').value=expense?.notes||'';pendingAttachmentIds=[...(expense?.attachments||[])];splitMode=expense?.splitMode||'equal';$$('[data-split]').forEach(x=>x.classList.toggle('active',x.dataset.split===splitMode));$('#deleteExpense').classList.toggle('hidden',!expense);renderAttachmentList();updateSplitUI(expense?.shares)}
-function selectedParticipants(){return $$('[data-participant].active').map(x=>+x.dataset.participant)}
-function updateSplitUI(existingShares=null){const parts=selectedParticipants(),amount=Number($('#amount').value)||0;$('#customSplitRows').classList.toggle('show',splitMode==='custom');if(splitMode==='custom'){$('#customSplitRows').innerHTML=parts.map(i=>`<label class="custom-row"><b>${esc(state.people[i])}</b><input class="custom-amount" data-i="${i}" type="number" min="0" step="0.01" inputmode="decimal" value="${existingShares&&existingShares[i]!=null?Number(existingShares[i]).toFixed(2):(parts.length?amount/parts.length:0).toFixed(2)}"></label>`).join('');$$('.custom-amount').forEach(x=>x.oninput=updateSplitPreview)}updateSplitPreview()}
-function updateSplitPreview(){const parts=selectedParticipants(),amount=Number($('#amount').value)||0;if(!parts.length){$('#splitPreview').textContent='Selecciona al menos una persona.';return}if(splitMode==='equal')$('#splitPreview').textContent=`${money(amount)} ÷ ${parts.length} = ${money(amount/parts.length)} por persona.`;else{const sum=$$('.custom-amount').reduce((a,x)=>a+(Number(x.value)||0),0),diff=amount-sum;$('#splitPreview').textContent=Math.abs(diff)<.01?`✓ Los montos suman ${money(amount)}.`:`Asignado ${money(sum)} · ${diff>0?'Falta':'Excede'} ${money(Math.abs(diff))}.`}}
-function openExpenseSheet(id=null){const expense=id?state.expenses.find(x=>x.id===id):null;populateExpenseForm(expense);$('#sheetHeading').textContent=expense?'Editar gasto':'Nuevo gasto';$('#sheetBackdrop').classList.add('open');setTimeout(()=>$('#amount').focus(),100)}
-function closeExpenseSheet(){$('#sheetBackdrop').classList.remove('open')}
-$('#quickAdd').onclick=()=>openExpenseSheet();$('#addExpenseTop').onclick=()=>openExpenseSheet();$('#sheetCancel').onclick=closeExpenseSheet;$('#sheetBackdrop').onclick=e=>{if(e.target===$('#sheetBackdrop'))closeExpenseSheet()};$('#amount').oninput=()=>updateSplitUI();$('#selectAll').onclick=()=>{$$('[data-participant]').forEach(x=>x.classList.add('active'));updateSplitUI()};$$('[data-split]').forEach(b=>b.onclick=()=>{splitMode=b.dataset.split;$$('[data-split]').forEach(x=>x.classList.toggle('active',x===b));updateSplitUI()});
-$('#attachments').onchange=async e=>{for(const file of [...e.target.files]){const id=await filePut(file);pendingAttachmentIds.push(id)}e.target.value='';renderAttachmentList()};
-async function renderAttachmentList(){const rows=[];for(const id of pendingAttachmentIds){const f=await fileGet(id);if(f)rows.push(`<div class="attachment-chip"><div class="file-icon">${f.type.includes('pdf')?'PDF':'🖼'}</div><div><b>${esc(f.name)}</b><small>${(f.size/1024).toFixed(0)} KB</small></div><div class="attachment-actions"><button type="button" data-preview-file="${id}">Ver</button><button type="button" class="remove" data-remove-file="${id}">Quitar</button></div></div>`)}$('#attachmentList').innerHTML=rows.join('');$$('[data-preview-file]').forEach(b=>b.onclick=()=>previewFile(b.dataset.previewFile));$$('[data-remove-file]').forEach(b=>b.onclick=async()=>{pendingAttachmentIds=pendingAttachmentIds.filter(x=>x!==b.dataset.removeFile);await fileDelete(b.dataset.removeFile);renderAttachmentList()})}
-async function previewFile(id){const f=await fileGet(id);if(!f)return;const url=URL.createObjectURL(f.blob);$('#previewContent').innerHTML=f.type.includes('pdf')?`<iframe src="${url}"></iframe>`:`<img src="${url}" alt="${esc(f.name)}">`;$('#attachmentPreview').classList.add('open')}
-$('#previewClose').onclick=()=>{$('#attachmentPreview').classList.remove('open');$('#previewContent').innerHTML=''};
-async function saveExpense(){const id=Number($('#expenseId').value)||Date.now(),amount=Number($('#amount').value),parts=selectedParticipants();if(!(amount>0)||!$('#description').value.trim()||!parts.length){toast('Completa monto, descripción y participantes');return}const shares=Array(6).fill(0);if(splitMode==='equal'){const each=amount/parts.length;parts.forEach(i=>shares[i]=each)}else{let sum=0;$$('.custom-amount').forEach(x=>{shares[+x.dataset.i]=Number(x.value)||0;sum+=Number(x.value)||0});if(Math.abs(sum-amount)>.01){toast('Los montos personalizados deben sumar el total');return}}const obj={id,date:$('#date').value,description:$('#description').value.trim(),amount,category:$('#category').value,payer:+$('#payer').value,participants:parts,shares,splitMode,attachments:[...pendingAttachmentIds],notes:$('#notes').value.trim(),updatedAt:Date.now()};const idx=state.expenses.findIndex(x=>x.id===id);if(idx>=0)state.expenses[idx]=obj;else state.expenses.push(obj);saveState();closeExpenseSheet();render();toast(idx>=0?'Gasto actualizado':'Gasto guardado')}
-$('#sheetSave').onclick=saveExpense;$('#expenseForm').onsubmit=e=>{e.preventDefault();saveExpense()};$('#deleteExpense').onclick=async()=>{const id=Number($('#expenseId').value),ex=state.expenses.find(x=>x.id===id);if(!ex||!confirm('¿Eliminar este gasto?'))return;for(const fid of ex.attachments||[])await fileDelete(fid);state.expenses=state.expenses.filter(x=>x.id!==id);saveState();closeExpenseSheet();render();toast('Gasto eliminado')};
-async function openExpenseFiles(id){const ex=state.expenses.find(x=>x.id===id);if(!ex||(ex.attachments||[]).length)return;await previewFile(ex.attachments[0])}
-$$('[data-filter]').forEach(b=>b.onclick=()=>{expenseFilter=b.dataset.filter;$$('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));render()});
-function buildCloseReview(){const key=currentMonthKey(),ex=monthExpenses(key),t=totals(ex),plan=settlePlan(ex),attachments=ex.reduce((a,e)=>a+(e.attachments||[]).length,0);$('#closeReview').innerHTML=`<div class="close-review-card"><h3>${monthName(key)}</h3><div class="summary-grid"><div class="summary-box"><small>Total</small><b>${money(t.spent)}</b></div><div class="summary-box"><small>Gastos</small><b>${t.count}</b></div><div class="summary-box"><small>Adjuntos</small><b>${attachments}</b></div></div></div><div class="close-review-card"><h3>Balances por persona</h3>${state.people.map((p,i)=>`<div class="settle-row"><div><b>${esc(p)}</b><small>Pagó ${money(t.paid[i])} · Le corresponde ${money(t.share[i])}</small></div><div class="settle-amount">${t.bal[i]>=0?'+':''}${money(t.bal[i])}</div></div>`).join('')}</div><div class="close-review-card"><h3>Pagos pendientes</h3>${plan.length?plan.map(d=>`<div class="settle-row"><div><b>${esc(state.people[d.from])} → ${esc(state.people[d.to])}</b></div><div class="settle-amount">${money(d.amount)}</div></div>`).join(''):'<div class="empty"><b>Todo saldado ✓</b></div>'}</div>`}
-$('#openCloseReview').onclick=()=>{buildCloseReview();$('#closeBackdrop').classList.add('open')};$('#closeCancel').onclick=()=>$('#closeBackdrop').classList.remove('open');$('#closeBackdrop').onclick=e=>{if(e.target===$('#closeBackdrop'))$('#closeBackdrop').classList.remove('open')};
-function blobToDataURL(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(blob)})}
-async function attachmentAppendixHTML(expenses){const blocks=[];for(const e of expenses){for(const id of e.attachments||[]){const f=await fileGet(id);if(!f)continue;if(f.type.startsWith('image/')){const data=await blobToDataURL(f.blob);blocks.push(`<section class="appendix"><h3>${esc(e.description)} · ${money(e.amount)}</h3><p>${esc(f.name)}</p><img src="${data}"></section>`)}else{blocks.push(`<section class="appendix pdf-note"><h3>${esc(e.description)} · ${money(e.amount)}</h3><p>Archivo PDF adjunto: ${esc(f.name)}. El archivo original permanece disponible dentro de la app.</p></section>`)}}}return blocks.join('')}
-async function generateMonthlyReport(){const key=currentMonthKey(),ex=monthExpenses(key),t=totals(ex),plan=settlePlan(ex),appendix=await attachmentAppendixHTML(ex);const rows=ex.map(e=>`<tr><td>${new Date(e.date+'T00:00:00').toLocaleDateString('es-US')}</td><td>${esc(e.description)}</td><td>${esc(e.category)}</td><td>${esc(state.people[e.payer])}</td><td>${money(e.amount)}</td><td>${(e.attachments||[]).length}</td></tr>`).join('');const peopleRows=state.people.map((p,i)=>`<tr><td>${esc(p)}</td><td>${money(t.paid[i])}</td><td>${money(t.share[i])}</td><td>${money(t.bal[i])}</td></tr>`).join('');const settleRows=plan.length?plan.map(d=>`<li>${esc(state.people[d.from])} debe pagar a ${esc(state.people[d.to])}: <b>${money(d.amount)}</b></li>`).join(''):'<li>El mes está completamente saldado.</li>';const html=`<!doctype html><html><head><meta charset="utf-8"><title>Reporte ${monthName(key)}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,Arial;color:#17202a;margin:36px}h1{font-size:30px;margin-bottom:4px}h2{margin-top:30px;border-bottom:1px solid #ddd;padding-bottom:8px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;border-bottom:1px solid #e5e5e5;text-align:left;font-size:12px}th{background:#f4f5f7}.summary{display:flex;gap:12px;margin:18px 0}.box{background:#f4f5f7;padding:14px;border-radius:12px;min-width:140px}.box small{display:block;color:#70757d}.box b{font-size:20px}.appendix{page-break-before:always}.appendix img{max-width:100%;max-height:900px;display:block;margin:auto}.pdf-note{border:1px solid #ddd;padding:20px;border-radius:12px}.muted{color:#777}</style></head><body><h1>Mi Casa · Estado de cuentas</h1><div class="muted">${monthName(key)} · generado ${new Date().toLocaleString('es-US')}</div><div class="summary"><div class="box"><small>Total gastado</small><b>${money(t.spent)}</b></div><div class="box"><small>Movimientos</small><b>${t.count}</b></div><div class="box"><small>Comprobantes</small><b>${ex.reduce((a,e)=>a+(e.attachments||[]).length,0)}</b></div></div><h2>Resumen por persona</h2><table><thead><tr><th>Persona</th><th>Pagó</th><th>Le corresponde</th><th>Balance</th></tr></thead><tbody>${peopleRows}</tbody></table><h2>Cómo se saldan las cuentas</h2><ul>${settleRows}</ul><h2>Detalle de gastos</h2><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Pagó</th><th>Total</th><th>Adj.</th></tr></thead><tbody>${rows}</tbody></table><h2>Anexos</h2><p>Las imágenes se incluyen a continuación. Los PDFs originales quedan identificados en este reporte.</p>${appendix}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`;const w=window.open('','_blank');if(!w){toast('Permite ventanas emergentes para generar el PDF');return}w.document.open();w.document.write(html);w.document.close()}
-$('#generatePdf').onclick=generateMonthlyReport;$('#finalizeClose').onclick=()=>{const key=currentMonthKey(),ex=monthExpenses(key),t=totals(ex);if(!ex.length){toast('No hay gastos para cerrar');return}if(!confirm(`¿Cerrar ${monthName(key)}?`))return;if(!state.closedMonths.some(c=>c.month===key))state.closedMonths.push({month:key,total:t.spent,expenseCount:t.count,closedAt:Date.now()});saveState();$('#closeBackdrop').classList.remove('open');render();toast('Mes cerrado')};
-$('#dangerReset').onclick=()=>{if(confirm('Esto borrará gastos, pagos y cierres locales. ¿Continuar?')){localStorage.removeItem(APP_KEY);state=structuredClone(DEFAULTS);saveState();render();toast('Datos locales borrados')}};
-if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
-render();
+function settlementPlan(){
+  const {balances}=calc();
+  let debt=Object.entries(balances).filter(([,v])=>v<-.005).map(([id,v])=>({id,a:-v})).sort((a,b)=>b.a-a.a);
+  let cred=Object.entries(balances).filter(([,v])=>v>.005).map(([id,v])=>({id,a:v})).sort((a,b)=>b.a-a.a);
+  const out=[];let i=0,j=0;
+  while(i<debt.length&&j<cred.length){let a=Math.min(debt[i].a,cred[j].a);out.push({from:debt[i].id,to:cred[j].id,amount:a});debt[i].a-=a;cred[j].a-=a;if(debt[i].a<.005)i++;if(cred[j].a<.005)j++}
+  return out;
+}
+const member=id=>members.find(m=>m.id===id)||{name:"Miembro"};
+
+function renderAll(){
+  if(!me||!householdId)return;
+  const mex=monthExpenses(),total=mex.reduce((s,e)=>s+Number(e.amount||0),0),{paid,share,balances}=calc();
+  const myBal=balances[me.uid]||0;
+  $("#monthTotal").textContent=money(total);$("#movementCount").textContent=`${mex.length} ${mex.length===1?"movimiento":"movimientos"}`;
+  $("#owedToMe").textContent=money(Math.max(0,myBal));$("#iOwe").textContent=money(Math.max(0,-myBal));
+  $("#statementTotal").textContent=money(total);$("#statementMeta").textContent=`${mex.length} gastos · Mes abierto`;
+
+  $("#peopleStrip").innerHTML=members.map(m=>`<div class="person-card"><div class="avatar">${esc(initials(m.name))}</div><b>${esc(m.name)}</b><small>Pagó ${money(paid[m.id]||0)}</small><small class="${balances[m.id]>0.005?"balance-positive":balances[m.id]<-.005?"balance-negative":""}">${balances[m.id]>0.005?"Recibe "+money(balances[m.id]):balances[m.id]<-.005?"Debe "+money(-balances[m.id]):"Saldado"}</small></div>`).join("");
+
+  const plan=settlementPlan();
+  const planHTML=plan.length?plan.slice(0,3).map(p=>settleHTML(p)).join(""):`<div class="empty"><b>Todo saldado ✓</b>No hay pagos pendientes.</div>`;
+  $("#settlementPreview").innerHTML=planHTML;
+  $("#settlementList").innerHTML=plan.length?plan.map(p=>settleHTML(p)).join(""):`<div class="empty"><b>Todo saldado ✓</b>No hay pagos pendientes este mes.</div>`;
+
+  const cats={};mex.forEach(e=>cats[e.category]=(cats[e.category]||0)+Number(e.amount||0));
+  const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+  $("#categoryList").innerHTML=entries.length?entries.slice(0,5).map(([k,v])=>`<div class="category-row"><b>${esc(k)}</b><span>${money(v)}</span><div class="category-track"><div class="category-fill" style="width:${total?Math.max(5,v/total*100):0}%"></div></div></div>`).join(""):`<div class="empty"><b>Sin categorías</b>Agrega tu primer gasto.</div>`;
+
+  const feed=expenses.length?expenses.map(feedHTML).join(""):`<div class="empty"><b>No hay gastos todavía</b>Toca “Nuevo gasto” para comenzar.</div>`;
+  $("#activityList").innerHTML=feed;$("#recentList").innerHTML=expenses.length?expenses.slice(0,5).map(feedHTML).join(""):`<div class="empty"><b>No hay gastos todavía</b>Toca “Nuevo gasto” para comenzar.</div>`;
+  $$(".feed-item[data-id]").forEach(el=>el.onclick=()=>openExpense(expenses.find(x=>x.id===el.dataset.id)));
+
+  $("#membersList").innerHTML=members.map(m=>`<div class="member-row"><div class="avatar">${esc(initials(m.name))}</div><div><b>${esc(m.name)}</b><small>${esc(m.email||"Miembro de la casa")}</small></div><span class="role-pill">${esc(m.role||"member")}</span></div>`).join("");
+  $("#monthPeople").innerHTML=members.map(m=>`<div class="settle-row"><div class="settle-person"><div class="avatar">${esc(initials(m.name))}</div><div><b>${esc(m.name)}</b><small>Pagó ${money(paid[m.id]||0)}</small></div></div><span></span><div class="settle-person right"><div><b>${balances[m.id]>=0?"Recibe":"Debe"} ${money(Math.abs(balances[m.id]||0))}</b><small>Parte ${money(share[m.id]||0)}</small></div></div></div>`).join("");
+  fillMemberControls();
+}
+function settleHTML(p){return `<div class="settle-row"><div class="settle-person"><div class="avatar">${esc(initials(member(p.from).name))}</div><div><b>${esc(member(p.from).name)}</b><small>paga</small></div></div><div class="settle-arrow">→<b>${money(p.amount)}</b></div><div class="settle-person right"><div><b>${esc(member(p.to).name)}</b><small>recibe</small></div><div class="avatar">${esc(initials(member(p.to).name))}</div></div></div>`}
+function feedHTML(e){const icons={Casa:"⌂",Comida:"●",Servicios:"⚡",Teléfono:"◫",Transporte:"◆",Salud:"✚",Otros:"•"};return `<div class="feed-item" data-id="${esc(e.id)}"><div class="cat-icon">${icons[e.category]||"•"}</div><div class="feed-copy"><b>${esc(e.description)}</b><small>${esc(member(e.payerId).name)} pagó · ${(e.participantIds||[]).length} participantes · ${esc(e.date)}</small></div><div class="feed-amount"><b>${money(e.amount)}</b><small>${esc(e.category||"Otros")}</small></div></div>`}
+
+function fillMemberControls(){
+  $("#expensePayer").innerHTML=members.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join("");
+  $("#participantPicker").innerHTML=members.map(m=>`<button type="button" class="participant selected" data-id="${esc(m.id)}"><span class="avatar">${esc(initials(m.name))}</span>${esc(m.name)}</button>`).join("");
+  $$("#participantPicker .participant").forEach(b=>b.onclick=()=>{b.classList.toggle("selected");updatePerPerson()});
+}
+function updatePerPerson(){const n=$$("#participantPicker .participant.selected").length,a=parseFloat($("#expenseAmount").value)||0;$("#perPerson").textContent=n?`${money(a/n)} c/u`:"Selecciona personas"}
+$("#expenseAmount").addEventListener("input",updatePerPerson);
+
+function openSheet(id){$("#overlay").classList.remove("hidden");$(id).classList.remove("hidden")}
+function closeSheets(){$("#overlay").classList.add("hidden");$$(".sheet").forEach(x=>x.classList.add("hidden"))}
+$("#overlay").onclick=closeSheets;$$(".sheetCancel").forEach(b=>b.onclick=closeSheets);$$(".memberCancel").forEach(b=>b.onclick=closeSheets);
+
+function openExpense(e=null){
+  if(!members.length){toast("Primero agrega miembros.");return}
+  $("#expenseForm").reset();$("#expenseId").value=e?.id||"";$("#expenseSheetTitle").textContent=e?"Editar gasto":"Nuevo gasto";$("#deleteExpense").classList.toggle("hidden",!e);
+  $("#expenseDate").value=e?.date||today();$("#expenseAmount").value=e?.amount||"";$("#expenseDescription").value=e?.description||"";$("#expenseCategory").value=e?.category||"Casa";$("#expensePayer").value=e?.payerId||me.uid;$("#expenseNotes").value=e?.notes||"";
+  $$("#participantPicker .participant").forEach(b=>b.classList.toggle("selected",e?(e.participantIds||[]).includes(b.dataset.id):true));
+  updatePerPerson();openSheet("#expenseSheet");setTimeout(()=>$("#expenseAmount").focus(),150)
+}
+["#newExpenseBtn","#quickExpense","#activityAdd","#mobileAdd"].forEach(id=>$(id).onclick=()=>openExpense());
+$("#saveExpenseTop").onclick=()=>$("#expenseForm").requestSubmit();
+$("#expenseForm").onsubmit=async e=>{
+  e.preventDefault();const amount=parseFloat($("#expenseAmount").value),ids=$$("#participantPicker .participant.selected").map(x=>x.dataset.id);
+  if(!(amount>0)){toast("Ingresa un monto válido.");return}if(!ids.length){toast("Selecciona al menos una persona.");return}
+  const data={amount,description:$("#expenseDescription").value.trim(),date:$("#expenseDate").value,category:$("#expenseCategory").value,payerId:$("#expensePayer").value,participantIds:ids,notes:$("#expenseNotes").value.trim(),updatedAt:serverTimestamp()};
+  try{const id=$("#expenseId").value;if(id)await setDoc(doc(db,"households",householdId,"expenses",id),data,{merge:true});else await addDoc(collection(db,"households",householdId,"expenses"),{...data,createdBy:me.uid,createdAt:serverTimestamp()});closeSheets();toast(id?"Gasto actualizado ✓":"Gasto agregado ✓")}catch(err){console.error(err);toast("No se pudo guardar el gasto.")}
+}
+$("#deleteExpense").onclick=async()=>{const id=$("#expenseId").value;if(!id||!confirm("¿Eliminar este gasto?"))return;try{await deleteDoc(doc(db,"households",householdId,"expenses",id));closeSheets();toast("Gasto eliminado")}catch(err){console.error(err);toast("No tienes permiso para eliminarlo.")}}
+
+$("#inviteBtn").onclick=()=>{$("#memberForm").reset();openSheet("#memberSheet")};
+$("#memberForm").onsubmit=async e=>{e.preventDefault();try{await addDoc(collection(db,"households",householdId,"members"),{name:$("#memberName").value.trim(),email:$("#memberEmail").value.trim(),role:"member",authUid:null,createdAt:serverTimestamp()});closeSheets();toast("Miembro agregado ✓")}catch(err){console.error(err);toast("No se pudo agregar. Solo el Owner puede hacerlo.")}}
+
+function go(view){
+  $$(".page").forEach(p=>p.classList.remove("active"));$("#"+view+"Page").classList.add("active");
+  $$("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+  const titles={home:`Buenos días, ${(me?.displayName||"").split(" ")[0]} 👋`,activity:"Actividad",balances:"Saldos",month:"Estado del mes",members:"Miembros"};
+  $("#pageTitle").textContent=titles[view]||"Mi Casa";window.scrollTo({top:0,behavior:"smooth"});
+}
+$$("[data-view]").forEach(b=>b.onclick=()=>go(b.dataset.view));$$("[data-jump]").forEach(b=>b.onclick=()=>go(b.dataset.jump));
+$("#profileBtn").onclick=()=>go("members");
+$("#printReport").onclick=()=>window.print();
+
+if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(console.warn));

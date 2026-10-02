@@ -3,101 +3,197 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#f5f5f7">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Mi Casa">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css">
+  <meta name="theme-color" content="#f5f7fb">
   <title>Mi Casa · Gastos</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-<div class="app-shell">
+<div id="toast" class="toast" aria-live="polite"></div>
+
+<section id="authView" class="auth-view">
+  <div class="auth-art">
+    <div class="brand-mark">⌂</div>
+    <div>
+      <span class="eyebrow">MI CASA</span>
+      <h1>Las cuentas de casa,<br>por fin simples.</h1>
+      <p>Gastos, balances y pagos de toda la familia en un mismo lugar.</p>
+    </div>
+    <div class="preview-stack">
+      <div class="mini-card"><span>Gastos del mes</span><b>$3,842.17</b><small>Todo organizado ✓</small></div>
+      <div class="mini-person"><i>NB</i><span><b>Nela</b><small>Te deben $248.40</small></span></div>
+    </div>
+  </div>
+
+  <div class="auth-panel">
+    <div class="auth-box">
+      <div class="mobile-logo"><span>⌂</span> Mi Casa</div>
+      <div class="segmented"><button id="loginTab" class="active">Entrar</button><button id="registerTab">Crear cuenta</button></div>
+
+      <form id="loginForm">
+        <h2>Qué bueno verte</h2><p>Entra para ver las cuentas de tu casa.</p>
+        <label>Email<input id="loginEmail" type="email" autocomplete="email" required placeholder="tu@email.com"></label>
+        <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="••••••••"></label>
+        <button class="primary wide" type="submit">Entrar</button>
+      </form>
+
+      <form id="registerForm" class="hidden">
+        <h2>Crea tu cuenta</h2><p>Serás la primera persona de tu hogar.</p>
+        <label>Tu nombre<input id="registerName" required maxlength="40" placeholder="Nela"></label>
+        <label>Email<input id="registerEmail" type="email" autocomplete="email" required placeholder="tu@email.com"></label>
+        <label>Contraseña<input id="registerPassword" type="password" autocomplete="new-password" required minlength="6" placeholder="Mínimo 6 caracteres"></label>
+        <button class="primary wide" type="submit">Crear cuenta</button>
+      </form>
+      <div id="authError" class="form-error"></div>
+    </div>
+  </div>
+</section>
+
+<section id="setupView" class="setup-view hidden">
+  <div class="setup-card">
+    <div class="setup-icon">⌂</div>
+    <span class="eyebrow">UN ÚLTIMO PASO</span>
+    <h1>Crea tu hogar</h1>
+    <p>Este será el espacio compartido donde tu familia verá gastos, balances y pagos.</p>
+    <form id="houseForm">
+      <label>Nombre del hogar<input id="houseName" required maxlength="50" value="Mi Casa"></label>
+      <button class="primary wide" type="submit">Crear Mi Casa</button>
+    </form>
+    <button id="setupLogout" class="text-btn">Cerrar sesión</button>
+  </div>
+</section>
+
+<section id="appView" class="app hidden">
   <aside class="sidebar">
-    <div class="brand"><div class="brand-icon">⌂</div><div><span class="eyebrow">MI CASA</span><strong>Gastos</strong></div></div>
-    <nav class="side-nav">
-      <button class="nav-item active" data-view="home"><span>⌂</span>Inicio</button>
-      <button class="nav-item" data-view="expenses"><span>≡</span>Gastos</button>
-      <button class="nav-item" data-view="settle"><span>↔</span>Saldar</button>
-      <button class="nav-item" data-view="close"><span>▣</span>Cierre mensual</button>
-      <button class="nav-item" data-view="people"><span>◎</span>Personas</button>
-      <button class="nav-item" data-view="settings"><span>⚙</span>Ajustes</button>
+    <div class="side-brand"><span>⌂</span><div><small>MI CASA</small><b id="sideHouse">Gastos</b></div></div>
+    <nav>
+      <button class="nav active" data-view="home"><span>⌂</span>Inicio</button>
+      <button class="nav" data-view="activity"><span>≡</span>Actividad</button>
+      <button class="nav" data-view="balances"><span>⇄</span>Saldos</button>
+      <button class="nav" data-view="month"><span>▣</span>Mes</button>
+      <button class="nav" data-view="members"><span>◎</span>Miembros</button>
     </nav>
-    <div class="sidebar-foot"><small>Datos guardados localmente en este dispositivo.</small></div>
+    <div class="side-user">
+      <div id="sideAvatar" class="avatar">N</div>
+      <div><b id="sideName">Usuario</b><small>Owner</small></div>
+      <button id="logoutBtn" title="Cerrar sesión">↗</button>
+    </div>
   </aside>
 
   <main class="main">
     <header class="topbar">
-      <div><span class="eyebrow" id="monthLabel"></span><h1 id="pageTitle">Resumen</h1></div>
-      <button id="quickAdd" class="primary-btn">＋ Nuevo gasto</button>
+      <div><span class="eyebrow" id="monthEyebrow">OCTUBRE 2026</span><h1 id="pageTitle">Buenos días 👋</h1></div>
+      <div class="top-actions"><button class="icon-btn" id="profileBtn">☺</button><button class="primary" id="newExpenseBtn">＋ Nuevo gasto</button></div>
     </header>
 
-    <section id="view-home" class="view active">
-      <div class="hero-card">
-        <div><span class="hero-label">Gastos del mes</span><strong id="heroSpent">$0.00</strong><p id="heroCount">0 movimientos</p></div>
-        <div class="hero-badges"><div><small>Te deben</small><b id="heroReceive">$0.00</b></div><div><small>Tú debes</small><b id="heroOwe">$0.00</b></div></div>
+    <div id="homePage" class="page active">
+      <section class="hero">
+        <div class="hero-main"><span>Gastos del mes</span><strong id="monthTotal">$0.00</strong><small id="movementCount">0 movimientos</small></div>
+        <div class="hero-stat"><span>Te deben</span><b id="owedToMe">$0.00</b></div>
+        <div class="hero-stat"><span>Tú debes</span><b id="iOwe">$0.00</b></div>
+        <div class="hero-orb"></div>
+      </section>
+
+      <section class="quick-row">
+        <button id="quickExpense"><span class="quick-icon">＋</span><b>Agregar gasto</b><small>Registra un pago</small></button>
+        <button data-jump="balances"><span class="quick-icon">⇄</span><b>Saldar</b><small>Ver quién paga</small></button>
+        <button data-jump="month"><span class="quick-icon">▣</span><b>Estado del mes</b><small>Resumen familiar</small></button>
+      </section>
+
+      <div class="section-head"><div><span class="eyebrow">FAMILIA</span><h2>Balances</h2></div><button data-jump="members">Ver miembros</button></div>
+      <div id="peopleStrip" class="people-strip"></div>
+
+      <div class="home-grid">
+        <section class="card">
+          <div class="section-head compact"><div><span class="eyebrow">PENDIENTES</span><h2>Quién paga a quién</h2></div><button data-jump="balances">Ver todos</button></div>
+          <div id="settlementPreview"></div>
+        </section>
+        <section class="card">
+          <div class="section-head compact"><div><span class="eyebrow">ESTE MES</span><h2>En qué gastamos</h2></div></div>
+          <div id="categoryList"></div>
+        </section>
       </div>
-      <div class="section-head"><div><span class="eyebrow">FAMILIA</span><h2>Balances</h2></div><button class="link-btn" data-view-jump="people">Editar personas</button></div>
-      <div id="peopleBalance" class="people-grid"></div>
-      <div class="dashboard-grid">
-        <article class="panel"><div class="panel-head"><span class="eyebrow">PENDIENTES</span><h2>Quién paga a quién</h2></div><div id="debtsList"></div></article>
-        <article class="panel"><div class="panel-head"><span class="eyebrow">CATEGORÍAS</span><h2>En qué gastamos</h2></div><div id="categoryList"></div></article>
+
+      <section class="activity-section">
+        <div class="section-head"><div><span class="eyebrow">ACTIVIDAD</span><h2>Recientes</h2></div><button data-jump="activity">Ver todo</button></div>
+        <div id="recentList" class="feed"></div>
+      </section>
+    </div>
+
+    <div id="activityPage" class="page">
+      <div class="page-card">
+        <div class="section-head"><div><span class="eyebrow">MOVIMIENTOS</span><h2>Actividad</h2></div><button class="primary small" id="activityAdd">＋ Agregar</button></div>
+        <div id="activityList" class="feed"></div>
       </div>
-      <div class="section-head"><div><span class="eyebrow">ACTIVIDAD</span><h2>Recientes</h2></div><button class="link-btn" data-view-jump="expenses">Ver todos</button></div>
-      <div id="recentExpenses" class="panel list-panel"></div>
-    </section>
+    </div>
 
-    <section id="view-expenses" class="view">
-      <div class="toolbar"><div class="segmented"><button class="seg active" data-filter="all">Todos</button><button class="seg" data-filter="month">Este mes</button></div><button id="addExpenseTop" class="primary-btn">＋ Agregar</button></div>
-      <div id="expensesList" class="panel list-panel"></div>
-    </section>
+    <div id="balancesPage" class="page">
+      <div class="page-card">
+        <span class="eyebrow">BALANCES</span><h2>Deudas simplificadas</h2>
+        <p class="muted">Calculamos la menor cantidad de pagos necesarios para dejar las cuentas en cero.</p>
+        <div id="settlementList" class="settlement-list"></div>
+      </div>
+    </div>
 
-    <section id="view-settle" class="view">
-      <div class="section-head plain"><div><span class="eyebrow">SALDAR CUENTAS</span><h2>Pagos pendientes</h2></div></div>
-      <div id="settleSummary" class="panel"></div>
-      <div class="note-card"><b>¿Cómo funciona?</b><p>Marca un pago como saldado cuando realmente haya sido pagado. El pago queda en el historial y deja de aparecer como pendiente.</p></div>
-    </section>
+    <div id="monthPage" class="page">
+      <div class="statement">
+        <span class="eyebrow">ESTADO DE CUENTA</span><h2 id="statementMonth">Octubre 2026</h2>
+        <strong id="statementTotal">$0.00</strong><p id="statementMeta">0 gastos · Mes abierto</p>
+        <div class="statement-actions"><button class="secondary" id="printReport">Generar reporte</button><button class="primary" disabled title="Disponible en la siguiente etapa">Cerrar mes</button></div>
+      </div>
+      <div class="page-card"><h2>Resumen por persona</h2><div id="monthPeople"></div></div>
+    </div>
 
-    <section id="view-close" class="view">
-      <div class="section-head plain"><div><span class="eyebrow">CIERRE MENSUAL</span><h2>Preparar estado de cuentas</h2></div></div>
-      <article class="panel close-card"><div class="close-icon">▣</div><div><h3 id="closeTitle">Cerrar mes actual</h3><p>Revisa gastos, adjuntos y pagos antes de generar el reporte final.</p></div><button id="openCloseReview" class="primary-btn">Revisar cierre</button></article>
-      <div class="section-head"><div><span class="eyebrow">HISTORIAL</span><h2>Meses cerrados</h2></div></div>
-      <div id="closeHistory" class="panel list-panel"></div>
-    </section>
-
-    <section id="view-people" class="view"><div class="section-head plain"><div><span class="eyebrow">GRUPO</span><h2>Personas</h2></div></div><div id="peopleEditor" class="people-editor"></div></section>
-    <section id="view-settings" class="view"><div class="section-head plain"><div><span class="eyebrow">AJUSTES</span><h2>Aplicación</h2></div></div><div class="panel settings-panel"><div class="settings-row"><div><b>Instalable en iPhone</b><p>Safari → Compartir → Añadir a pantalla de inicio.</p></div><span>✓</span></div><div class="settings-row"><div><b>Recibos y facturas</b><p>Se guardan localmente en IndexedDB.</p></div><span>✓</span></div></div><button id="dangerReset" class="danger-btn">Borrar todos los datos locales</button></section>
+    <div id="membersPage" class="page">
+      <div class="page-card">
+        <div class="section-head"><div><span class="eyebrow">MI CASA</span><h2>Miembros</h2></div><button class="primary small" id="inviteBtn">＋ Agregar miembro</button></div>
+        <p class="muted">Puedes crear miembros de la familia ahora. Las invitaciones por email llegarán en la siguiente etapa.</p>
+        <div id="membersList" class="members-list"></div>
+      </div>
+    </div>
   </main>
-</div>
 
-<nav class="bottom-nav"><button class="bottom-item active" data-view="home"><span>⌂</span>Inicio</button><button class="bottom-item" data-view="expenses"><span>≡</span>Gastos</button><button class="bottom-item" data-view="settle"><span>↔</span>Saldar</button><button class="bottom-item" data-view="close"><span>▣</span>Cierre</button></nav>
+  <nav class="bottom-nav">
+    <button class="active" data-view="home"><span>⌂</span><small>Inicio</small></button>
+    <button data-view="activity"><span>≡</span><small>Actividad</small></button>
+    <button id="mobileAdd" class="add"><span>＋</span></button>
+    <button data-view="balances"><span>⇄</span><small>Saldos</small></button>
+    <button data-view="members"><span>◎</span><small>Miembros</small></button>
+  </nav>
+</section>
 
-<div id="sheetBackdrop" class="sheet-backdrop">
-  <section class="sheet">
-    <div class="sheet-handle"></div>
-    <header class="sheet-header"><button id="sheetCancel" class="link-btn">Cancelar</button><h2 id="sheetHeading">Nuevo gasto</h2><button id="sheetSave" class="link-btn strong">Guardar</button></header>
-    <form id="expenseForm">
-      <input type="hidden" id="expenseId">
-      <div class="amount-input-wrap"><span>$</span><input id="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
-      <div class="form-card">
-        <label class="form-row"><span>Descripción</span><input id="description" required placeholder="Supermercado"></label>
-        <label class="form-row"><span>Fecha</span><input id="date" type="date" required></label>
-        <label class="form-row"><span>Categoría</span><select id="category"><option>Supermercado</option><option>Servicios</option><option>Teléfonos</option><option>Internet</option><option>Casa</option><option>Transporte</option><option>Otro</option></select></label>
-        <label class="form-row"><span>Pagó</span><select id="payer"></select></label>
-      </div>
-      <div class="sheet-section"><div class="section-head mini"><div><span class="eyebrow">PARTICIPANTES</span><h3>¿Quién participa?</h3></div><button type="button" id="selectAll" class="link-btn">Todos</button></div><div id="participantPicker" class="participant-picker"></div></div>
-      <div class="sheet-section"><div class="section-head mini"><div><span class="eyebrow">REPARTO</span><h3>Cómo dividir</h3></div></div><div class="segmented full"><button type="button" class="seg active" data-split="equal">Por igual</button><button type="button" class="seg" data-split="custom">Montos exactos</button></div><div id="customSplitRows" class="custom-split"></div><div id="splitPreview" class="split-preview"></div></div>
-      <div class="sheet-section"><div class="section-head mini"><div><span class="eyebrow">COMPROBANTES</span><h3>Facturas y recibos</h3></div></div><label class="upload-card"><input id="attachments" type="file" accept="image/*,.pdf,application/pdf" multiple><span class="upload-icon">＋</span><div><b>Agregar archivo</b><small>Fotos, imágenes o PDF</small></div></label><div id="attachmentList" class="attachment-list"></div></div>
-      <label class="notes-card"><span>Notas</span><textarea id="notes" rows="3" placeholder="Opcional"></textarea></label>
-      <button id="deleteExpense" type="button" class="danger-btn hidden">Eliminar gasto</button>
-    </form>
-  </section>
-</div>
+<div id="overlay" class="overlay hidden"></div>
 
-<div id="closeBackdrop" class="sheet-backdrop"><section class="sheet close-sheet"><div class="sheet-handle"></div><header class="sheet-header"><button id="closeCancel" class="link-btn">Cancelar</button><h2>Cierre mensual</h2><div></div></header><div id="closeReview"></div><div class="close-actions"><button id="generatePdf" class="secondary-btn">Descargar PDF</button><button id="finalizeClose" class="primary-btn">Cerrar mes</button></div></section></div>
-<div id="attachmentPreview" class="preview-modal"><button id="previewClose" class="preview-close">×</button><div id="previewContent" class="preview-content"></div></div>
-<div id="toast" class="toast"></div>
-<script src="app.js"></script>
+<aside id="expenseSheet" class="sheet hidden" aria-modal="true">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn sheetCancel">Cancelar</button><b id="expenseSheetTitle">Nuevo gasto</b><button id="saveExpenseTop" class="text-btn accent">Guardar</button></div>
+  <form id="expenseForm">
+    <input id="expenseId" type="hidden">
+    <div class="amount-wrap"><span>$</span><input id="expenseAmount" inputmode="decimal" placeholder="0.00" required></div>
+    <label>¿En qué se gastó?<input id="expenseDescription" required maxlength="80" placeholder="Ej. Internet, supermercado…"></label>
+    <div class="form-grid"><label>Fecha<input id="expenseDate" type="date" required></label><label>Categoría<select id="expenseCategory"><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Otros</option></select></label></div>
+    <label>Pagó<select id="expensePayer"></select></label>
+    <fieldset><legend>¿Para quién fue?</legend><div id="participantPicker" class="participant-picker"></div></fieldset>
+    <div class="split-box"><div><b>División</b><small>Se divide por igual entre los seleccionados.</small></div><span id="perPerson">$0.00 c/u</span></div>
+    <div class="receipt-placeholder"><span>▧</span><div><b>Adjuntar recibo</b><small>Preparado para imágenes y PDF</small></div><em>Próximamente</em></div>
+    <label>Nota <span class="optional">(opcional)</span><textarea id="expenseNotes" rows="2" maxlength="300" placeholder="Añade algún detalle…"></textarea></label>
+    <button class="primary wide" type="submit">Guardar gasto</button>
+    <button id="deleteExpense" class="danger wide hidden" type="button">Eliminar gasto</button>
+  </form>
+</aside>
+
+<aside id="memberSheet" class="sheet small-sheet hidden">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn memberCancel">Cancelar</button><b>Agregar miembro</b><span></span></div>
+  <form id="memberForm">
+    <label>Nombre<input id="memberName" required maxlength="40" placeholder="Nombre"></label>
+    <label>Email <span class="optional">(opcional)</span><input id="memberEmail" type="email" placeholder="persona@email.com"></label>
+    <p class="info-note">Este miembro aparecerá en gastos y balances. El acceso con su propia cuenta se habilitará con el sistema de invitaciones.</p>
+    <button class="primary wide" type="submit">Agregar a Mi Casa</button>
+  </form>
+</aside>
+
+<script type="module" src="./app.js"></script>
 </body>
 </html>
