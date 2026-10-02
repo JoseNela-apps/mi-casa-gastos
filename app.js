@@ -8,7 +8,7 @@ export const firebaseConfig = {
 };
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc, collection, query, orderBy, onSnapshot, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc, collection, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
 const fb = initializeApp(firebaseConfig);
 const auth = getAuth(fb);
@@ -48,16 +48,60 @@ onAuthStateChanged(auth, async user=>{
 });
 
 $("#houseForm").onsubmit=async e=>{
-  e.preventDefault(); if(!me)return;
+  e.preventDefault();
+  if(!me)return;
+
   const name=$("#houseName").value.trim()||"Mi Casa";
+  const button=$("#houseForm button[type='submit']");
+  const originalText=button?.textContent||"Crear Mi Casa";
+
   try{
+    if(button){button.disabled=true;button.textContent="Creando…";}
+
+    // IMPORTANTE:
+    // Se crea primero el hogar y después el documento del owner.
+    // Firestore no puede evaluar con get() un documento que todavía
+    // no existe fuera de un batch durante el bootstrap inicial.
     const href=doc(collection(db,"households"));
-    const batch=writeBatch(db);
-    batch.set(href,{name,ownerId:me.uid,createdAt:serverTimestamp()});
-    batch.set(doc(db,"households",href.id,"members",me.uid),{name:me.displayName||me.email.split("@")[0],email:me.email,role:"owner",authUid:me.uid,createdAt:serverTimestamp()});
-    batch.set(doc(db,"users",me.uid),{name:me.displayName||me.email.split("@")[0],email:me.email,householdId:href.id},{merge:true});
-    await batch.commit(); householdId=href.id; startApp(); toast("Tu hogar está listo ✓");
-  }catch(err){console.error(err);toast("No se pudo crear el hogar.");}
+
+    await setDoc(href,{
+      name,
+      ownerId:me.uid,
+      createdAt:serverTimestamp()
+    });
+
+    await setDoc(
+      doc(db,"households",href.id,"members",me.uid),
+      {
+        name:me.displayName||me.email.split("@")[0],
+        email:me.email,
+        role:"owner",
+        authUid:me.uid,
+        createdAt:serverTimestamp()
+      }
+    );
+
+    await setDoc(
+      doc(db,"users",me.uid),
+      {
+        name:me.displayName||me.email.split("@")[0],
+        email:me.email,
+        householdId:href.id
+      },
+      {merge:true}
+    );
+
+    householdId=href.id;
+    await startApp();
+    toast("Tu hogar está listo ✓");
+  }catch(err){
+    console.error("CREATE_HOUSEHOLD_ERROR",err);
+    toast(err?.code==="permission-denied"
+      ?"Firebase bloqueó la creación. Revisa las reglas publicadas."
+      :"No se pudo crear el hogar.");
+  }finally{
+    if(button){button.disabled=false;button.textContent=originalText;}
+  }
 }
 
 async function startApp(){

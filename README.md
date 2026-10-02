@@ -1,24 +1,25 @@
-# Mi Casa · Gastos — V3
+# Mi Casa · Gastos — V3.1
 
-V3 conecta la app con Firebase Authentication y Cloud Firestore.
+Corrección del alta inicial del hogar con Firebase.
 
-## Incluye
-- Registro e inicio de sesión con email/contraseña.
-- Creación del hogar por el Owner.
-- Miembros, gastos y balances sincronizados en Firestore.
-- Diseño responsive tipo app para iPhone y desktop.
-- Crear, editar y eliminar gastos.
-- División igual entre participantes.
-- Cálculo de quién paga a quién.
-- PWA básica.
+## Qué se corrigió
+- El hogar se crea primero.
+- Después se crea el documento del owner en `members`.
+- Finalmente se enlaza el `householdId` al perfil del usuario.
+- Se actualizó el caché del Service Worker para evitar que GitHub Pages conserve el `app.js` anterior.
+- Se agregó un estado `Creando…` para evitar dobles clics.
 
-## Antes de probar
-Firebase Authentication (Email/Password) y Cloud Firestore deben estar habilitados.
+## Para actualizar GitHub Pages
+Sube/reemplaza estos archivos en la raíz del repositorio:
+- `index.html`
+- `styles.css`
+- `app.js`
+- `manifest.json`
+- `service-worker.js`
+- `README.md`
+- carpeta `icons`
 
-## GitHub Pages
-Sube **el contenido de esta carpeta** a la raíz de `mi-casa-gastos`, reemplazando los archivos anteriores.
+Después espera a que GitHub Pages termine el deployment y recarga la app.
 
-> Nota: Cloud Storage no está activado en esta etapa, por lo que adjuntar recibos compartidos queda preparado visualmente pero deshabilitado.
-
-## Importante sobre miembros
-En V3 puedes crear miembros de la familia para usarlos en gastos y balances. El sistema de invitaciones para que cada miembro vincule su propia cuenta se implementa en la siguiente etapa.
+## Firebase
+Mantén Authentication y Firestore activos. Las reglas deben permitir que el owner cree el hogar y, una vez creado, cree su documento de miembro.
