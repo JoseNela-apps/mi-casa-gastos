@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f5f5f7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Mi Casa">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <title>Mi Casa · Gastos</title>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-icon">⌂</div><div><span class="eyebrow">MI CASA</span><strong>Gastos</strong></div></div>
+    <nav class="side-nav">
+      <button class="nav-item active" data-view="home"><span>⌂</span>Inicio</button>
+      <button class="nav-item" data-view="expenses"><span>≡</span>Gastos</button>
+      <button class="nav-item" data-view="settle"><span>↔</span>Saldar</button>
+      <button class="nav-item" data-view="close"><span>▣</span>Cierre mensual</button>
+      <button class="nav-item" data-view="people"><span>◎</span>Personas</button>
+      <button class="nav-item" data-view="settings"><span>⚙</span>Ajustes</button>
+    </nav>
+    <div class="sidebar-foot"><small>Datos guardados localmente en este dispositivo.</small></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><span class="eyebrow" id="monthLabel"></span><h1 id="pageTitle">Resumen</h1></div>
+      <button id="quickAdd" class="primary-btn">＋ Nuevo gasto</button>
+    </header>
+
+    <section id="view-home" class="view active">
+      <div class="hero-card">
+        <div><span class="hero-label">Gastos del mes</span><strong id="heroSpent">$0.00</strong><p id="heroCount">0 movimientos</p></div>
+        <div class="hero-badges"><div><small>Te deben</small><b id="heroReceive">$0.00</b></div><div><small>Tú debes</small><b id="heroOwe">$0.00</b></div></div>
+      </div>
+      <div class="section-head"><div><span class="eyebrow">FAMILIA</span><h2>Balances</h2></div><button class="link-btn" data-view-jump="people">Editar personas</button></div>
+      <div id="peopleBalance" class="people-grid"></div>
+      <div class="dashboard-grid">
+        <article class="panel"><div class="panel-head"><span class="eyebrow">PENDIENTES</span><h2>Quién paga a quién</h2></div><div id="debtsList"></div></article>
+        <article class="panel"><div class="panel-head"><span class="eyebrow">CATEGORÍAS</span><h2>En qué gastamos</h2></div><div id="categoryList"></div></article>
+      </div>
+      <div class="section-head"><div><span class="eyebrow">ACTIVIDAD</span><h2>Recientes</h2></div><button class="link-btn" data-view-jump="expenses">Ver todos</button></div>
+      <div id="recentExpenses" class="panel list-panel"></div>
+    </section>
+
+    <section id="view-expenses" class="view">
+      <div class="toolbar"><div class="segmented"><button class="seg active" data-filter="all">Todos</button><button class="seg" data-filter="month">Este mes</button></div><button id="addExpenseTop" class="primary-btn">＋ Agregar</button></div>
+      <div id="expensesList" class="panel list-panel"></div>
+    </section>
+
+    <section id="view-settle" class="view">
+      <div class="section-head plain"><div><span class="eyebrow">SALDAR CUENTAS</span><h2>Pagos pendientes</h2></div></div>
+      <div id="settleSummary" class="panel"></div>
+      <div class="note-card"><b>¿Cómo funciona?</b><p>Marca un pago como saldado cuando realmente haya sido pagado. El pago queda en el historial y deja de aparecer como pendiente.</p></div>
+    </section>
+
+    <section id="view-close" class="view">
+      <div class="section-head plain"><div><span class="eyebrow">CIERRE MENSUAL</span><h2>Preparar estado de cuentas</h2></div></div>
+      <article class="panel close-card"><div class="close-icon">▣</div><div><h3 id="closeTitle">Cerrar mes actual</h3><p>Revisa gastos, adjuntos y pagos antes de generar el reporte final.</p></div><button id="openCloseReview" class="primary-btn">Revisar cierre</button></article>
+      <div class="section-head"><div><span class="eyebrow">HISTORIAL</span><h2>Meses cerrados</h2></div></div>
+      <div id="closeHistory" class="panel list-panel"></div>
+    </section>
+
+    <section id="view-people" class="view"><div class="section-head plain"><div><span class="eyebrow">GRUPO</span><h2>Personas</h2></div></div><div id="peopleEditor" class="people-editor"></div></section>
+    <section id="view-settings" class="view"><div class="section-head plain"><div><span class="eyebrow">AJUSTES</span><h2>Aplicación</h2></div></div><div class="panel settings-panel"><div class="settings-row"><div><b>Instalable en iPhone</b><p>Safari → Compartir → Añadir a pantalla de inicio.</p></div><span>✓</span></div><div class="settings-row"><div><b>Recibos y facturas</b><p>Se guardan localmente en IndexedDB.</p></div><span>✓</span></div></div><button id="dangerReset" class="danger-btn">Borrar todos los datos locales</button></section>
+  </main>
+</div>
+
+<nav class="bottom-nav"><button class="bottom-item active" data-view="home"><span>⌂</span>Inicio</button><button class="bottom-item" data-view="expenses"><span>≡</span>Gastos</button><button class="bottom-item" data-view="settle"><span>↔</span>Saldar</button><button class="bottom-item" data-view="close"><span>▣</span>Cierre</button></nav>
+
+<div id="sheetBackdrop" class="sheet-backdrop">
+  <section class="sheet">
+    <div class="sheet-handle"></div>
+    <header class="sheet-header"><button id="sheetCancel" class="link-btn">Cancelar</button><h2 id="sheetHeading">Nuevo gasto</h2><button id="sheetSave" class="link-btn strong">Guardar</button></header>
+    <form id="expenseForm">
+      <input type="hidden" id="expenseId">
+      <div class="amount-input-wrap"><span>$</span><input id="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="form-card">
+        <label class="form-row"><span>Descripción</span><input id="description" required placeholder="Supermercado"></label>
+        <label class="form-row"><span>Fecha</span><input id="date" type="date" required></label>
+        <label class="form-row"><span>Categoría</span><select id="category"><option>Supermercado</option><option>Servicios</option><option>Teléfonos</option><option>Internet</option><option>Casa</option><option>Transporte</option><option>Otro</option></select></label>
+        <label class="form-row"><span>Pagó</span><select id="payer"></select></label>
+      </div>
+      <div class="sheet-section"><div class="section-head mini"><div><span class="eyebrow">PARTICIPANTES</span><h3>¿Quién participa?</h3></div><button type="button" id="selectAll" class="link-btn">Todos</button></div><div id="participantPicker" class="participant-picker"></div></div>
+      <div class="sheet-section"><div class="section-head mini"><div><span class="eyebrow">REPARTO</span><h3>Cómo dividir</h3></div></div><div class="segmented full"><button type="button" class="seg active" data-split="equal">Por igual</button><button type="button" class="seg" data-split="custom">Montos exactos</button></div><div id="customSplitRows" class="custom-split"></div><div id="splitPreview" class="split-preview"></div></div>
+      <div class="sheet-section"><div class="section-head mini"><div><span class="eyebrow">COMPROBANTES</span><h3>Facturas y recibos</h3></div></div><label class="upload-card"><input id="attachments" type="file" accept="image/*,.pdf,application/pdf" multiple><span class="upload-icon">＋</span><div><b>Agregar archivo</b><small>Fotos, imágenes o PDF</small></div></label><div id="attachmentList" class="attachment-list"></div></div>
+      <label class="notes-card"><span>Notas</span><textarea id="notes" rows="3" placeholder="Opcional"></textarea></label>
+      <button id="deleteExpense" type="button" class="danger-btn hidden">Eliminar gasto</button>
+    </form>
+  </section>
+</div>
+
+<div id="closeBackdrop" class="sheet-backdrop"><section class="sheet close-sheet"><div class="sheet-handle"></div><header class="sheet-header"><button id="closeCancel" class="link-btn">Cancelar</button><h2>Cierre mensual</h2><div></div></header><div id="closeReview"></div><div class="close-actions"><button id="generatePdf" class="secondary-btn">Descargar PDF</button><button id="finalizeClose" class="primary-btn">Cerrar mes</button></div></section></div>
+<div id="attachmentPreview" class="preview-modal"><button id="previewClose" class="preview-close">×</button><div id="previewContent" class="preview-content"></div></div>
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
