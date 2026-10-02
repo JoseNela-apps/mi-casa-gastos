@@ -7,7 +7,7 @@ export const firebaseConfig = {
   appId: "1:938411430388:web:60e0621370f281fde569a1"
 };
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc, collection, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
 const fb = initializeApp(firebaseConfig);
@@ -23,6 +23,8 @@ const monthKey = d => (d||today()).slice(0,7);
 const currentMonth = monthKey();
 const monthLabel = (key=currentMonth) => { const [y,m]=key.split("-").map(Number); return new Intl.DateTimeFormat("es-US",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(Date.UTC(y,m-1,1))); };
 let me=null, householdId=null, household=null, members=[], expenses=[], unsubs=[];
+const emailKey = e => encodeURIComponent(String(e||"").trim().toLowerCase());
+const isOwner = () => !!(me && household && household.ownerId===me.uid);
 
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2300)}
 function authError(err){ const map={"auth/email-already-in-use":"Ese email ya tiene una cuenta.","auth/invalid-credential":"Email o contraseña incorrectos.","auth/weak-password":"La contraseña necesita al menos 6 caracteres.","auth/invalid-email":"Revisa el email."}; $("#authError").textContent=map[err.code]||err.message||"Ocurrió un error."; }
@@ -35,6 +37,43 @@ $("#loginForm").onsubmit=async e=>{e.preventDefault();$("#authError").textConten
 $("#registerForm").onsubmit=async e=>{e.preventDefault();$("#authError").textContent="";try{const name=$("#registerName").value.trim();const c=await createUserWithEmailAndPassword(auth,$("#registerEmail").value.trim(),$("#registerPassword").value);await updateProfile(c.user,{displayName:name});await setDoc(doc(db,"users",c.user.uid),{name,email:c.user.email,householdId:null,createdAt:serverTimestamp()});}catch(err){authError(err)}}
 $("#setupLogout").onclick=()=>signOut(auth);$("#logoutBtn").onclick=()=>signOut(auth);
 
+$("#forgotPassword").onclick=async()=>{
+  const email=$("#loginEmail").value.trim();
+  if(!email){$("#authError").textContent="Escribe primero tu email.";return}
+  try{await sendPasswordResetEmail(auth,email);$("#authError").textContent="Te enviamos un enlace para crear una nueva contraseña."}
+  catch(err){authError(err)}
+};
+
+async function claimMyInvite(){
+  if(!me?.email){toast("Tu cuenta necesita un email.");return false}
+  const ref=doc(db,"invites",emailKey(me.email));
+  const snap=await getDoc(ref);
+  if(!snap.exists()){toast("No encontramos una invitación para "+me.email);return false}
+  const inv=snap.data();
+  if(String(inv.email||"").toLowerCase()!==me.email.toLowerCase()){toast("La invitación no coincide con tu email.");return false}
+
+  const memberRef=doc(db,"households",inv.householdId,"members",inv.memberId);
+  await setDoc(memberRef,{
+    authUid:me.uid,
+    email:me.email,
+    inviteStatus:"active",
+    joinedAt:serverTimestamp()
+  },{merge:true});
+  await setDoc(doc(db,"users",me.uid),{
+    name:me.displayName||me.email.split("@")[0],
+    email:me.email,
+    householdId:inv.householdId,
+    memberId:inv.memberId,
+    joinedAt:serverTimestamp()
+  },{merge:true});
+  await deleteDoc(ref);
+  householdId=inv.householdId;
+  await startApp();
+  toast("¡Ya entraste a Mi Casa! ✓");
+  return true;
+}
+$("#claimInviteBtn").onclick=async()=>{try{await claimMyInvite()}catch(err){console.error("CLAIM_INVITE",err);toast("No se pudo aceptar la invitación.")}};
+
 onAuthStateChanged(auth, async user=>{
   clearSubs(); me=user; householdId=null; household=null; members=[]; expenses=[];
   if(!user){showOnly("authView");return}
@@ -42,7 +81,10 @@ onAuthStateChanged(auth, async user=>{
     const uref=doc(db,"users",user.uid); let us=await getDoc(uref);
     if(!us.exists()){await setDoc(uref,{name:user.displayName||user.email.split("@")[0],email:user.email,householdId:null,createdAt:serverTimestamp()});us=await getDoc(uref)}
     householdId=us.data().householdId||null;
-    if(!householdId){showOnly("setupView");return}
+    if(!householdId){
+      try{if(await claimMyInvite())return}catch(invErr){console.warn("AUTO_CLAIM_INVITE",invErr)}
+      showOnly("setupView");return
+    }
     startApp();
   }catch(err){console.error(err);toast("No pudimos cargar tu cuenta.");}
 });
@@ -112,6 +154,9 @@ async function startApp(){
   $("#sideHouse").textContent=household.name||"Mi Casa";
   $("#sideName").textContent=me.displayName||me.email;
   $("#sideAvatar").textContent=initials(me.displayName||me.email);
+  $("#adminNav").classList.toggle("hidden",!isOwner());
+  $$(".owner-only").forEach(x=>x.classList.toggle("hidden",!isOwner()));
+  $(".side-user small").textContent=isOwner()?"Owner":"Member";
   $("#monthEyebrow").textContent=monthLabel().toUpperCase();
   $("#statementMonth").textContent=monthLabel().replace(/^./,c=>c.toUpperCase());
   unsubs.push(onSnapshot(collection(db,"households",householdId,"members"),snap=>{members=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
@@ -163,7 +208,16 @@ function renderAll(){
   $("#activityList").innerHTML=feed;$("#recentList").innerHTML=expenses.length?expenses.slice(0,5).map(feedHTML).join(""):`<div class="empty"><b>No hay gastos todavía</b>Toca “Nuevo gasto” para comenzar.</div>`;
   $$(".feed-item[data-id]").forEach(el=>el.onclick=()=>openExpense(expenses.find(x=>x.id===el.dataset.id)));
 
-  $("#membersList").innerHTML=members.map(m=>`<div class="member-row"><div class="avatar">${esc(initials(m.name))}</div><div><b>${esc(m.name)}</b><small>${esc(m.email||"Miembro de la casa")}</small></div><span class="role-pill">${esc(m.role||"member")}</span></div>`).join("");
+  $("#membersList").innerHTML=members.map(m=>{
+    const status=m.authUid?"Activo":m.email?"Invitación pendiente":"Sin acceso";
+    return `<div class="member-row"><div class="avatar">${esc(initials(m.name))}</div><div><b>${esc(m.name)}</b><small>${esc(m.email||"Sin email")} · ${status}</small></div><span class="role-pill">${esc(m.role||"member")}</span></div>`
+  }).join("");
+  if($("#adminUsers")) $("#adminUsers").innerHTML=isOwner()?members.map(m=>{
+    const status=m.authUid?"Activo":m.email?"Pendiente":"Sin acceso";
+    return `<div class="member-row admin-user" data-member="${esc(m.id)}"><div class="avatar">${esc(initials(m.name))}</div><div class="member-main"><b>${esc(m.name)}</b><small>${esc(m.email||"Sin email")} · ${status}</small></div><div class="admin-actions">${m.email?`<button class="secondary mini reset-access" data-email="${esc(m.email)}">Restablecer contraseña</button>`:""}${m.id!==me.uid?`<button class="danger mini remove-member" data-member="${esc(m.id)}">Eliminar</button>`:""}</div></div>`
+  }).join(""):`<div class="empty"><b>Solo el Owner</b>Esta sección está reservada para el administrador.</div>`;
+  $$(".reset-access").forEach(b=>b.onclick=async ev=>{ev.stopPropagation();try{await sendPasswordResetEmail(auth,b.dataset.email);toast("Enlace de contraseña enviado ✓")}catch(err){console.error(err);toast("No se pudo enviar el restablecimiento.")}});
+  $$(".remove-member").forEach(b=>b.onclick=async ev=>{ev.stopPropagation();if(!confirm("¿Quitar este miembro de Mi Casa?"))return;try{await deleteDoc(doc(db,"households",householdId,"members",b.dataset.member));toast("Miembro eliminado")}catch(err){console.error(err);toast("No se pudo eliminar.")}});
   $("#monthPeople").innerHTML=members.map(m=>`<div class="settle-row"><div class="settle-person"><div class="avatar">${esc(initials(m.name))}</div><div><b>${esc(m.name)}</b><small>Pagó ${money(paid[m.id]||0)}</small></div></div><span></span><div class="settle-person right"><div><b>${balances[m.id]>=0?"Recibe":"Debe"} ${money(Math.abs(balances[m.id]||0))}</b><small>Parte ${money(share[m.id]||0)}</small></div></div></div>`).join("");
   fillMemberControls();
 }
@@ -200,12 +254,33 @@ $("#expenseForm").onsubmit=async e=>{
 $("#deleteExpense").onclick=async()=>{const id=$("#expenseId").value;if(!id||!confirm("¿Eliminar este gasto?"))return;try{await deleteDoc(doc(db,"households",householdId,"expenses",id));closeSheets();toast("Gasto eliminado")}catch(err){console.error(err);toast("No tienes permiso para eliminarlo.")}}
 
 $("#inviteBtn").onclick=()=>{$("#memberForm").reset();openSheet("#memberSheet")};
-$("#memberForm").onsubmit=async e=>{e.preventDefault();try{await addDoc(collection(db,"households",householdId,"members"),{name:$("#memberName").value.trim(),email:$("#memberEmail").value.trim(),role:"member",authUid:null,createdAt:serverTimestamp()});closeSheets();toast("Miembro agregado ✓")}catch(err){console.error(err);toast("No se pudo agregar. Solo el Owner puede hacerlo.")}}
+$("#memberForm").onsubmit=async e=>{
+  e.preventDefault();
+  if(!isOwner()){toast("Solo el Owner puede administrar miembros.");return}
+  const name=$("#memberName").value.trim();
+  const email=$("#memberEmail").value.trim().toLowerCase();
+  try{
+    const mref=doc(collection(db,"households",householdId,"members"));
+    await setDoc(mref,{name,email:email||null,role:"member",authUid:null,inviteStatus:email?"pending":"none",createdAt:serverTimestamp()});
+    if(email){
+      await setDoc(doc(db,"invites",emailKey(email)),{
+        email,
+        householdId,
+        memberId:mref.id,
+        householdName:household?.name||"Mi Casa",
+        invitedBy:me.uid,
+        createdAt:serverTimestamp()
+      });
+    }
+    closeSheets();
+    toast(email?"Invitación preparada ✓":"Miembro agregado ✓");
+  }catch(err){console.error(err);toast("No se pudo agregar/invitar.")}
+}
 
 function go(view){
   $$(".page").forEach(p=>p.classList.remove("active"));$("#"+view+"Page").classList.add("active");
   $$("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
-  const titles={home:`Buenos días, ${(me?.displayName||"").split(" ")[0]} 👋`,activity:"Actividad",balances:"Saldos",month:"Estado del mes",members:"Miembros"};
+  const titles={home:`Buenos días, ${(me?.displayName||"").split(" ")[0]} 👋`,activity:"Actividad",balances:"Saldos",month:"Estado del mes",members:"Miembros",admin:"Administración"};
   $("#pageTitle").textContent=titles[view]||"Mi Casa";window.scrollTo({top:0,behavior:"smooth"});
 }
 $$("[data-view]").forEach(b=>b.onclick=()=>go(b.dataset.view));$$("[data-jump]").forEach(b=>b.onclick=()=>go(b.dataset.jump));

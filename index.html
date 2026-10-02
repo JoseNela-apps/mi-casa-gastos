@@ -35,7 +35,7 @@
         <h2>Qué bueno verte</h2><p>Entra para ver las cuentas de tu casa.</p>
         <label>Email<input id="loginEmail" type="email" autocomplete="email" required placeholder="tu@email.com"></label>
         <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="••••••••"></label>
-        <button class="primary wide" type="submit">Entrar</button>
+        <button class="primary wide" type="submit">Entrar</button><button id="forgotPassword" class="text-btn wide" type="button">Olvidé mi contraseña</button>
       </form>
 
       <form id="registerForm" class="hidden">
@@ -60,6 +60,9 @@
       <label>Nombre del hogar<input id="houseName" required maxlength="50" value="Mi Casa"></label>
       <button class="primary wide" type="submit">Crear Mi Casa</button>
     </form>
+    <div class="setup-divider"><span>o</span></div>
+    <button id="claimInviteBtn" class="secondary wide" type="button">Buscar invitación para mi email</button>
+    <p class="info-note">Si Alberto ya te agregó con este mismo email, usa esta opción. No crees otro hogar.</p>
     <button id="setupLogout" class="text-btn">Cerrar sesión</button>
   </div>
 </section>
@@ -73,6 +76,7 @@
       <button class="nav" data-view="balances"><span>⇄</span>Saldos</button>
       <button class="nav" data-view="month"><span>▣</span>Mes</button>
       <button class="nav" data-view="members"><span>◎</span>Miembros</button>
+      <button id="adminNav" class="nav hidden" data-view="admin"><span>⚙</span>Admin</button>
     </nav>
     <div class="side-user">
       <div id="sideAvatar" class="avatar">N</div>
@@ -147,9 +151,18 @@
 
     <div id="membersPage" class="page">
       <div class="page-card">
-        <div class="section-head"><div><span class="eyebrow">MI CASA</span><h2>Miembros</h2></div><button class="primary small" id="inviteBtn">＋ Agregar miembro</button></div>
-        <p class="muted">Puedes crear miembros de la familia ahora. Las invitaciones por email llegarán en la siguiente etapa.</p>
+        <div class="section-head"><div><span class="eyebrow">MI CASA</span><h2>Miembros</h2></div><button class="primary small owner-only" id="inviteBtn">＋ Agregar miembro</button></div>
+        <p class="muted">Cada persona puede tener su propia cuenta. El Owner administra accesos, pero las contraseñas nunca son visibles.</p>
         <div id="membersList" class="members-list"></div>
+      </div>
+    </div>
+
+    <div id="adminPage" class="page">
+      <div class="page-card">
+        <div class="section-head"><div><span class="eyebrow">OWNER</span><h2>Administración</h2></div></div>
+        <p class="muted">Controla quién entra a Mi Casa, roles y recuperación de acceso.</p>
+        <div class="admin-callout"><b>Seguridad</b><p>Firebase no permite ver contraseñas. Puedes enviar un restablecimiento seguro al email del usuario.</p></div>
+        <div id="adminUsers" class="members-list"></div>
       </div>
     </div>
   </main>
@@ -188,9 +201,9 @@
   <div class="sheet-head"><button class="text-btn memberCancel">Cancelar</button><b>Agregar miembro</b><span></span></div>
   <form id="memberForm">
     <label>Nombre<input id="memberName" required maxlength="40" placeholder="Nombre"></label>
-    <label>Email <span class="optional">(opcional)</span><input id="memberEmail" type="email" placeholder="persona@email.com"></label>
-    <p class="info-note">Este miembro aparecerá en gastos y balances. El acceso con su propia cuenta se habilitará con el sistema de invitaciones.</p>
-    <button class="primary wide" type="submit">Agregar a Mi Casa</button>
+    <label>Email <span class="optional">(requerido para darle acceso)</span><input id="memberEmail" type="email" placeholder="persona@email.com"></label>
+    <p class="info-note">Si agregas un email, se crea una invitación. La persona debe entrar/crear su cuenta con exactamente ese email y tocar “Buscar invitación”.</p>
+    <button class="primary wide" type="submit">Agregar / invitar</button>
   </form>
 </aside>
 
