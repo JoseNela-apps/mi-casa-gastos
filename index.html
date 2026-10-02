@@ -29,7 +29,7 @@
   <div class="auth-panel">
     <div class="auth-box">
       <div class="mobile-logo"><span>⌂</span> Mi Casa</div>
-      <div class="segmented"><button id="loginTab" class="active">Entrar</button><button id="registerTab">Crear cuenta</button></div>
+      <div class="segmented"><button id="loginTab" class="active">Entrar</button><button id="registerTab">Activar acceso</button></div>
 
       <form id="loginForm">
         <h2>Qué bueno verte</h2><p>Entra para ver las cuentas de tu casa.</p>
@@ -43,27 +43,21 @@
         <label>Tu nombre<input id="registerName" required maxlength="40" placeholder="Nela"></label>
         <label>Email<input id="registerEmail" type="email" autocomplete="email" required placeholder="tu@email.com"></label>
         <label>Contraseña<input id="registerPassword" type="password" autocomplete="new-password" required minlength="6" placeholder="Mínimo 6 caracteres"></label>
-        <button class="primary wide" type="submit">Crear cuenta</button>
+        <button class="primary wide" type="submit">Activar acceso</button>
       </form>
       <div id="authError" class="form-error"></div>
     </div>
   </div>
 </section>
 
-<section id="setupView" class="setup-view hidden">
-  <div class="setup-card">
-    <div class="setup-icon">⌂</div>
-    <span class="eyebrow">UN ÚLTIMO PASO</span>
-    <h1>Crea tu hogar</h1>
-    <p>Este será el espacio compartido donde tu familia verá gastos, balances y pagos.</p>
-    <form id="houseForm">
-      <label>Nombre del hogar<input id="houseName" required maxlength="50" value="Mi Casa"></label>
-      <button class="primary wide" type="submit">Crear Mi Casa</button>
-    </form>
-    <div class="setup-divider"><span>o</span></div>
-    <button id="claimInviteBtn" class="secondary wide" type="button">Buscar invitación para mi email</button>
-    <p class="info-note">Si Alberto ya te agregó con este mismo email, usa esta opción. No crees otro hogar.</p>
-    <button id="setupLogout" class="text-btn">Cerrar sesión</button>
+<section id="setupView" class="view hidden">
+  <div class="auth-card">
+    <div class="brand-mark">⌂</div>
+    <span class="eyebrow">ACCESO PENDIENTE</span>
+    <h1>Esta cuenta no pertenece a Mi Casa</h1>
+    <p>Solo Alberto, el Owner, puede crear y administrar el hogar. Si ya te agregó como miembro, usa el mismo email de la invitación.</p>
+    <button id="claimInviteBtn" class="primary wide" type="button">Entrar con mi invitación</button>
+    <button id="setupLogout" class="text-btn wide" type="button">Cerrar sesión</button>
   </div>
 </section>
 

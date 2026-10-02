@@ -34,7 +34,25 @@ function clearSubs(){unsubs.forEach(f=>f());unsubs=[]}
 $("#loginTab").onclick=()=>{$("#loginTab").classList.add("active");$("#registerTab").classList.remove("active");$("#loginForm").classList.remove("hidden");$("#registerForm").classList.add("hidden");$("#authError").textContent=""}
 $("#registerTab").onclick=()=>{$("#registerTab").classList.add("active");$("#loginTab").classList.remove("active");$("#registerForm").classList.remove("hidden");$("#loginForm").classList.add("hidden");$("#authError").textContent=""}
 $("#loginForm").onsubmit=async e=>{e.preventDefault();$("#authError").textContent="";try{await signInWithEmailAndPassword(auth,$("#loginEmail").value.trim(),$("#loginPassword").value)}catch(err){authError(err)}}
-$("#registerForm").onsubmit=async e=>{e.preventDefault();$("#authError").textContent="";try{const name=$("#registerName").value.trim();const c=await createUserWithEmailAndPassword(auth,$("#registerEmail").value.trim(),$("#registerPassword").value);await updateProfile(c.user,{displayName:name});await setDoc(doc(db,"users",c.user.uid),{name,email:c.user.email,householdId:null,createdAt:serverTimestamp()});}catch(err){authError(err)}}
+$("#registerForm").onsubmit=async e=>{
+  e.preventDefault();$("#authError").textContent="";
+  const name=$("#registerName").value.trim();
+  const email=$("#registerEmail").value.trim().toLowerCase();
+  const password=$("#registerPassword").value;
+  try{
+    // Nadie puede auto-registrarse: debe existir primero una invitación creada por Alberto.
+    const inviteSnap=await getDoc(doc(db,"invites",emailKey(email)));
+    if(!inviteSnap.exists()){
+      $("#authError").textContent="Este email no fue autorizado por el administrador.";
+      return;
+    }
+    const c=await createUserWithEmailAndPassword(auth,email,password);
+    await updateProfile(c.user,{displayName:name});
+    await setDoc(doc(db,"users",c.user.uid),{name,email:c.user.email,householdId:null,createdAt:serverTimestamp()});
+    me=c.user;
+    await claimMyInvite();
+  }catch(err){authError(err)}
+}
 $("#setupLogout").onclick=()=>signOut(auth);$("#logoutBtn").onclick=()=>signOut(auth);
 
 $("#forgotPassword").onclick=async()=>{
@@ -81,71 +99,25 @@ onAuthStateChanged(auth, async user=>{
     const uref=doc(db,"users",user.uid); let us=await getDoc(uref);
     if(!us.exists()){await setDoc(uref,{name:user.displayName||user.email.split("@")[0],email:user.email,householdId:null,createdAt:serverTimestamp()});us=await getDoc(uref)}
     householdId=us.data().householdId||null;
-    if(!householdId){
-      try{if(await claimMyInvite())return}catch(invErr){console.warn("AUTO_CLAIM_INVITE",invErr)}
-      showOnly("setupView");return
-    }
+
+    // An invitation from the Owner takes precedence over any accidental old household.
+    // This fixes users such as Nela who previously created a separate Mi Casa.
+    try{
+      const inviteSnap=await getDoc(doc(db,"invites",emailKey(me.email||"")));
+      if(inviteSnap.exists()){
+        const invitedHousehold=inviteSnap.data().householdId;
+        if(invitedHousehold && invitedHousehold!==householdId){
+          await claimMyInvite();
+          return;
+        }
+      }
+    }catch(invErr){console.warn("AUTO_CLAIM_INVITE",invErr)}
+
+    if(!householdId){showOnly("setupView");return}
     startApp();
   }catch(err){console.error(err);toast("No pudimos cargar tu cuenta.");}
 });
 
-$("#houseForm").onsubmit=async e=>{
-  e.preventDefault();
-  if(!me)return;
-
-  const name=$("#houseName").value.trim()||"Mi Casa";
-  const button=$("#houseForm button[type='submit']");
-  const originalText=button?.textContent||"Crear Mi Casa";
-
-  try{
-    if(button){button.disabled=true;button.textContent="Creando…";}
-
-    // V3.2: el ID del hogar inicial es el UID del owner.
-    // Así el bootstrap puede validarse únicamente con request.auth,
-    // sin depender de lecturas de documentos que aún no existen.
-    const hid=me.uid;
-    const href=doc(db,"households",hid);
-
-    await setDoc(href,{
-      name,
-      ownerId:me.uid,
-      createdAt:serverTimestamp()
-    },{merge:true});
-
-    await setDoc(
-      doc(db,"households",hid,"members",me.uid),
-      {
-        name:me.displayName||me.email.split("@")[0],
-        email:me.email,
-        role:"owner",
-        authUid:me.uid,
-        createdAt:serverTimestamp()
-      },
-      {merge:true}
-    );
-
-    await setDoc(
-      doc(db,"users",me.uid),
-      {
-        name:me.displayName||me.email.split("@")[0],
-        email:me.email,
-        householdId:hid
-      },
-      {merge:true}
-    );
-
-    householdId=hid;
-    await startApp();
-    toast("Tu hogar está listo ✓");
-  }catch(err){
-    console.error("CREATE_HOUSEHOLD_ERROR",err?.code,err?.message,err);
-    toast(err?.code==="permission-denied"
-      ?"Firestore sigue usando reglas antiguas. Publica FIREBASE_RULES.txt."
-      :"No se pudo crear el hogar.");
-  }finally{
-    if(button){button.disabled=false;button.textContent=originalText;}
-  }
-}
 
 async function startApp(){
   showOnly("appView");

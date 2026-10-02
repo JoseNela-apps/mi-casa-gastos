@@ -1,34 +1,29 @@
-# Mi Casa · Gastos — V4 Usuarios & Admin
+# Mi Casa · Gastos — V4.1 OWNER ONLY
 
-## Qué incluye
-- Owner/Admin de Mi Casa.
-- Invitaciones por email vinculadas a miembros existentes.
-- Una cuenta invitada entra al MISMO hogar en vez de crear otro.
-- Estado de acceso: Activo / Invitación pendiente / Sin acceso.
-- Panel Admin.
-- Owner puede eliminar miembros de su hogar.
-- Owner puede enviar restablecimiento de contraseña.
-- “Olvidé mi contraseña” en login.
-- Reglas Firestore actualizadas.
+Esta versión cambia el modelo de acceso:
 
-## IMPORTANTE: contraseñas
-Las contraseñas de Firebase Authentication no son visibles para el Owner ni para la app. Esto es intencional y seguro. El Owner puede enviar un restablecimiento, pero no leer la contraseña actual.
+- Solo existe el hogar principal de Alberto.
+- La aplicación web ya NO permite crear hogares nuevos.
+- Los demás usuarios solamente pueden activar acceso si Alberto los agregó/invitó primero.
+- Si un usuario sin invitación intenta registrarse, la app lo bloquea.
+- Si Nela ya tenía un hogar accidental y Alberto la invita con el mismo email, la invitación tiene prioridad y su perfil se vincula al hogar de Alberto.
+- Alberto sigue siendo Owner y puede borrar gastos/miembros dentro de su hogar.
+- Firebase nunca muestra contraseñas; Alberto puede enviar restablecimientos.
 
 ## Instalación
-1. En Firebase Console → Firestore → Reglas, reemplaza TODO por `FIREBASE_RULES.txt` y pulsa Publicar.
-2. En GitHub reemplaza los archivos de la app por los de este paquete.
-3. Haz commit a `main` y espera el deployment de GitHub Pages.
-4. En Firebase Authentication → Settings → Authorized domains agrega `josenela-apps.github.io`.
+1. Firebase Console → Firestore Database → Reglas.
+2. Reemplaza TODO por `FIREBASE_RULES.txt` y pulsa Publicar.
+3. Reemplaza los archivos del repositorio GitHub por los de este ZIP.
+4. Commit a main y espera GitHub Pages.
+5. Recarga la app.
 
-## Cómo entra Nela
-1. Alberto entra como Owner.
-2. En Miembros agrega a Nela usando EXACTAMENTE el email de su cuenta Firebase.
-3. Nela cierra sesión e inicia sesión con su email.
-4. Si su perfil no tiene hogar, la app busca automáticamente su invitación. También puede pulsar “Buscar invitación para mi email”.
-5. Queda vinculada al mismo hogar.
+## Nela
+En la sesión de Alberto:
+1. Si ya existe una ficha vieja de Nela sin el email correcto, elimínala o crea/actualiza la invitación usando `nela.berling@gmail.com`.
+2. Nela inicia sesión con SU cuenta existente.
+3. La app detecta la invitación y cambia su perfil al hogar de Alberto.
 
-## Si Nela ya creó un hogar accidental
-Esta versión no borra automáticamente datos ajenos. Si esa cuenta ya tiene `householdId` propio, primero hay que desvincular/migrar ese perfil. No se debe borrar a ciegas porque podría contener datos.
+## Sobre borrar la cuenta/hogar accidental de Nela
+V4.1 impide que vuelva a crearse otro hogar, pero NO intenta borrar automáticamente desde el navegador un hogar antiguo que pueda contener datos. El Owner no debe recibir permisos globales de borrado desde JavaScript público.
 
-## Super Admin global
-Esta versión da a Alberto control total sobre SU hogar. Un super-admin capaz de administrar cuentas Authentication y hogares de toda la plataforma requiere Firebase Admin SDK en un backend/Cloud Function; no debe ponerse en JavaScript público de GitHub Pages.
+Después de que Nela quede vinculada a Alberto, el hogar antiguo puede eliminarse manualmente una sola vez en Firestore. Para un botón de Super Admin que elimine cuentas de Firebase Authentication y hogares globalmente se necesita Firebase Admin SDK/Cloud Functions (backend).
