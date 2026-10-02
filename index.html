@@ -69,7 +69,7 @@
       <button class="nav" data-view="activity"><span>≡</span>Actividad</button>
       <button class="nav" data-view="balances"><span>⇄</span>Saldos</button>
       <button class="nav" data-view="month"><span>▣</span>Mes</button>
-      <button class="nav" data-view="members"><span>◎</span>Miembros</button>
+      <button id="membersNav" class="nav owner-only" data-view="members"><span>◎</span>Miembros</button>
       <button id="adminNav" class="nav hidden" data-view="admin"><span>⚙</span>Admin</button>
     </nav>
     <div class="side-user">
@@ -82,7 +82,7 @@
   <main class="main">
     <header class="topbar">
       <div><span class="eyebrow" id="monthEyebrow"></span><h1 id="pageTitle">Mi Casa</h1></div>
-      <div class="top-actions"><button class="icon-btn" id="profileBtn" title="Mi perfil">☺</button><button class="primary" id="newExpenseBtn">＋ Nuevo gasto</button></div>
+      <div class="top-actions"><button class="lang-btn" id="languageToggle" type="button" title="Cambiar idioma">ES / EN</button><button class="icon-btn" id="profileBtn" title="Mi perfil">☺</button><button class="primary" id="newExpenseBtn">＋ Nuevo gasto</button></div>
     </header>
 
     <div id="homePage" class="page active">
@@ -195,6 +195,16 @@
   </nav>
 </section>
 
+<div id="reportLanguageModal" class="report-lang-modal hidden" role="dialog" aria-modal="true">
+  <div class="report-lang-card">
+    <span class="eyebrow">REPORTE PDF</span>
+    <h2>Selecciona el idioma</h2>
+    <p>El reporte se preparará completo en el idioma que elijas.</p>
+    <div class="report-lang-actions"><button class="secondary" id="reportSpanish">Español</button><button class="primary" id="reportEnglish">English</button></div>
+    <button class="text-btn wide" id="reportLanguageCancel">Cancelar</button>
+  </div>
+</div>
+
 <div id="overlay" class="overlay hidden"></div>
 
 <aside id="expenseSheet" class="sheet hidden" aria-modal="true">
@@ -214,8 +224,8 @@
     </div>
     <div id="splitBox" class="split-box"><div><b>División</b><small id="splitHelp">Se divide por igual.</small></div><span id="perPerson">$0.00 c/u</span></div>
     <div id="customSplitRows" class="custom-split-rows hidden"></div>
-    <label class="receipt-input">Comprobante <span class="optional">(imagen pequeña o PDF)</span><input id="expenseReceipt" type="file" accept="image/*,application/pdf"></label>
-    <div id="receiptPreview" class="receipt-placeholder"><span>▧</span><div><b>Sin comprobante</b><small>Archivos pequeños pueden guardarse con el gasto.</small></div></div>
+    <label class="receipt-input">Comprobante <span class="optional">(imagen pequeña o PDF)</span><input id="expenseReceipt" type="file" accept="image/*,application/pdf" multiple></label>
+    <div id="receiptPreview" class="receipt-placeholder"><span>▧</span><div><b>Sin comprobante</b><small>Puedes adjuntar varias fotos o PDFs al mismo gasto.</small></div></div>
     <label>Nota <span class="optional">(opcional)</span><textarea id="expenseNotes" rows="2" maxlength="300" placeholder="Añade algún detalle…"></textarea></label>
     <button class="primary wide" type="submit">Guardar gasto</button>
     <button id="deleteExpense" class="danger wide hidden" type="button">Eliminar gasto</button>

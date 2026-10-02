@@ -25,3 +25,23 @@ button{font:inherit}.premium-hero{grid-template-columns:1.5fr .72fr .72fr .9fr;a
 @media(max-width:1100px){.premium-hero{grid-template-columns:1.4fr 1fr 1fr}.hero-budget{grid-column:1/-1}.insights-grid{grid-template-columns:repeat(2,1fr)}.quick-row{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.insights-grid{grid-template-columns:1fr}.month-grid{grid-template-columns:1fr}.filter-row{grid-template-columns:1fr}.cal-day{min-height:58px;padding:5px}.cal-day i,.cal-day em{display:none}.profile-stats{grid-template-columns:1fr}.premium-hero{grid-template-columns:1fr 1fr}.hero-main{grid-column:1/-1}.hero-budget{grid-column:1/-1}.quick-row{grid-template-columns:1fr 1fr}.budget-rows label{grid-template-columns:1fr 120px}}
 @media print{.sidebar,.topbar,.bottom-nav,.statement-actions,.quick-row,.insights-card,.owner-only{display:none!important}.main{margin:0!important;padding:24px!important}.page{display:none!important}#monthPage{display:block!important}.statement,.page-card{box-shadow:none!important;border:1px solid #ddd!important}.financial-calendar{page-break-inside:avoid}}
+
+/* V5.1 — múltiples comprobantes */
+#expenseReceipt{width:100%}
+.attachment-list{width:100%;display:grid;gap:8px}
+.attachment-item{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;width:100%;padding:8px 4px}
+.attachment-item+ .attachment-item{border-top:1px solid #edf0f4}
+.attachment-item b,.attachment-item small{display:block;overflow:hidden;text-overflow:ellipsis}
+.attachment-item small{color:#7d8998;margin-top:2px}
+.remove-attachment{width:30px;height:30px;border:0;border-radius:9px;background:#f1f4f8;color:#6f7a89;font-size:18px;cursor:pointer}
+.remove-attachment:hover{background:#ffecec;color:#c93b3b}
+
+
+/* V5.2 — language + owner privacy */
+.lang-btn{border:1px solid var(--line,#dfe5ec);background:#fff;border-radius:14px;padding:11px 14px;font-weight:800;color:#17324d;cursor:pointer;white-space:nowrap}
+.lang-btn:hover{box-shadow:0 8px 24px rgba(30,70,110,.10)}
+.report-lang-modal{position:fixed;inset:0;z-index:2000;background:rgba(13,28,45,.38);backdrop-filter:blur(12px);display:grid;place-items:center;padding:20px}
+.report-lang-modal.hidden{display:none}
+.report-lang-card{width:min(430px,100%);background:#fff;border-radius:28px;padding:30px;box-shadow:0 30px 90px rgba(13,28,45,.25)}
+.report-lang-card h2{margin:8px 0}.report-lang-card p{color:#718096;line-height:1.5}.report-lang-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0 10px}.report-lang-actions button{min-height:48px}
+@media(max-width:720px){.lang-btn{padding:9px 10px;border-radius:12px;font-size:12px}}

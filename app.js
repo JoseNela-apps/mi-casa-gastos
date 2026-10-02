@@ -16,10 +16,12 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(n||0));
 const initials=n=>String(n||"?").trim().split(/\s+/).slice(0,2).map(x=>x[0]?.toUpperCase()).join("");
 const today=()=>new Date().toISOString().slice(0,10), monthKey=d=>(d||today()).slice(0,7);
-const nowMonth=()=>monthKey(), monthLabel=k=>{const [y,m]=k.split("-").map(Number);return new Intl.DateTimeFormat("es-US",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(Date.UTC(y,m-1,1)))};
+const nowMonth=()=>monthKey();
+let uiLang=localStorage.getItem("miCasaLanguage")||"es";
+const monthLabel=k=>{const [y,m]=k.split("-").map(Number);return new Intl.DateTimeFormat(uiLang==="en"?"en-US":"es-US",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(Date.UTC(y,m-1,1)))};
 const emailKey=e=>encodeURIComponent(String(e||"").trim().toLowerCase());
 const CATS=["Casa","Comida","Servicios","Teléfono","Transporte","Salud","Suscripciones","Otros"];
-let me=null,householdId=null,household=null,members=[],expenses=[],settlements=[],budgets={},recurrings=[],closings={},unsubs=[],activeMonth=nowMonth(),currentSplit="equal",receiptCache=null;
+let me=null,householdId=null,household=null,members=[],expenses=[],settlements=[],budgets={},recurrings=[],closings={},unsubs=[],activeMonth=nowMonth(),currentSplit="equal",attachmentCache=[];
 
 const isOwner=()=>!!(me&&household&&household.ownerId===me.uid);
 const myMember=()=>members.find(m=>m.authUid===me?.uid)||members.find(m=>m.id===me?.uid)||null;
@@ -54,7 +56,7 @@ async function startApp(){
   const h=await getDoc(doc(db,"households",householdId));if(!h.exists()){toast("No encontramos el hogar.");return}
   household={id:h.id,...h.data()};
   $("#sideHouse").textContent=household.name||"Mi Casa";$("#sideName").textContent=me.displayName||me.email;$("#sideAvatar").textContent=initials(me.displayName||me.email);
-  $("#adminNav").classList.toggle("hidden",!isOwner());$$(".owner-only").forEach(x=>x.classList.toggle("hidden",!isOwner()));$(".side-user small").textContent=isOwner()?"Owner":"Member";
+  $("#adminNav").classList.toggle("hidden",!isOwner());$("#membersNav")?.classList.toggle("hidden",!isOwner());$$(".owner-only").forEach(x=>x.classList.toggle("hidden",!isOwner()));$(".side-user small").textContent=isOwner()?"Owner":"Member";
   $("#monthEyebrow").textContent=monthLabel(activeMonth).toUpperCase();$("#statementMonth").textContent=cap(monthLabel(activeMonth));
   unsubs.push(onSnapshot(collection(db,"households",householdId,"members"),s=>{members=s.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
   unsubs.push(onSnapshot(query(collection(db,"households",householdId,"expenses"),orderBy("date","desc")),s=>{expenses=s.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
@@ -151,7 +153,7 @@ function openMemberDetail(id){
 }
 function settleHTML(p,withButton=false,i=0){return `<div class="settle-row"><div class="settle-person"><div class="avatar">${esc(initials(member(p.from).name))}</div><div><b>${esc(member(p.from).name)}</b><small>paga</small></div></div><div class="settle-arrow">→<b>${money(p.amount)}</b>${withButton?`<button class="secondary mini mark-paid" data-index="${i}">Marcar pagado</button>`:""}</div><div class="settle-person right"><div><b>${esc(member(p.to).name)}</b><small>recibe</small></div><div class="avatar">${esc(initials(member(p.to).name))}</div></div></div>`}
 async function markSettlement(i){const p=settlementPlan()[i];if(!p)return;try{await addDoc(collection(db,"households",householdId,"settlements"),{...p,month:activeMonth,status:"paid",method:"Transferencia",createdBy:me.uid,paidAt:serverTimestamp()});toast("Pago registrado ✓")}catch(e){console.error(e);toast("No se pudo registrar el pago.")}}
-function feedHTML(e){const icons={Casa:"⌂",Comida:"●",Servicios:"⚡",Teléfono:"◫",Transporte:"◆",Salud:"✚",Suscripciones:"↻",Otros:"•"};return `<div class="feed-item" data-id="${esc(e.id)}"><div class="cat-icon">${icons[e.category]||"•"}</div><div class="feed-copy"><b>${esc(e.description)}</b><small>${esc(member(e.payerId).name)} pagó · ${(e.participantIds||[]).length} participantes · ${esc(e.date)}</small></div><div class="feed-amount"><b>${money(e.amount)}</b><small>${esc(e.category||"Otros")}${e.receiptName?" · 📎":""}</small></div></div>`}
+function feedHTML(e){const icons={Casa:"⌂",Comida:"●",Servicios:"⚡",Teléfono:"◫",Transporte:"◆",Salud:"✚",Suscripciones:"↻",Otros:"•"};return `<div class="feed-item" data-id="${esc(e.id)}"><div class="cat-icon">${icons[e.category]||"•"}</div><div class="feed-copy"><b>${esc(e.description)}</b><small>${esc(member(e.payerId).name)} pagó · ${(e.participantIds||[]).length} participantes · ${esc(e.date)}</small></div><div class="feed-amount"><b>${money(e.amount)}</b><small>${esc(e.category||"Otros")}${((e.attachments&&e.attachments.length)||e.receiptName)?" · 📎":""}</small></div></div>`}
 
 function fillMemberControls(){
   const opts=members.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join("");$("#expensePayer").innerHTML=opts;$("#recurringPayer").innerHTML=opts;
@@ -177,24 +179,41 @@ $("#overlay").onclick=closeSheets;$$(".sheetCancel,.memberCancel,.budgetCancel,.
 
 function openExpense(e=null){
   if(!members.length){toast("Primero agrega miembros.");return}
-  $("#expenseForm").reset();receiptCache=e?.receiptData||null;$("#expenseId").value=e?.id||"";$("#expenseSheetTitle").textContent=e?"Editar gasto":"Nuevo gasto";$("#deleteExpense").classList.toggle("hidden",!e);
+  $("#expenseForm").reset();attachmentCache=e?.attachments?[...e.attachments]:(e?.receiptData?[{name:e.receiptName||"Comprobante",type:e.receiptType||"",data:e.receiptData}]:[]);$("#expenseId").value=e?.id||"";$("#expenseSheetTitle").textContent=e?"Editar gasto":"Nuevo gasto";$("#deleteExpense").classList.toggle("hidden",!e);
   $("#expenseDate").value=e?.date||today();$("#expenseAmount").value=e?.amount||"";$("#expenseDescription").value=e?.description||"";$("#expenseCategory").value=e?.category||"Casa";$("#expensePayer").value=e?.payerId||myMember()?.id||members[0]?.id;$("#expenseNotes").value=e?.notes||"";
   currentSplit=e?.splitMode||"equal";$$(".split-tab").forEach(x=>x.classList.toggle("active",x.dataset.split===currentSplit));
   $$("#participantPicker .participant").forEach(b=>b.classList.toggle("selected",e?(e.participantIds||[]).includes(b.dataset.id):true));
   renderCustomSplitRows(e?.splitValues||{});updatePerPerson();
-  $("#receiptPreview").innerHTML=e?.receiptName?`<span>📎</span><div><b>${esc(e.receiptName)}</b><small>${esc(e.receiptType||"archivo")}</small></div>`:`<span>▧</span><div><b>Sin comprobante</b><small>Archivos pequeños pueden guardarse con el gasto.</small></div>`;
+  renderAttachmentPreview();
   openSheet("#expenseSheet");setTimeout(()=>$("#expenseAmount").focus(),100)
 }
 ["#newExpenseBtn","#quickExpense","#activityAdd","#mobileAdd"].forEach(id=>$(id).onclick=()=>openExpense());
 $("#saveExpenseTop").onclick=()=>$("#expenseForm").requestSubmit();
 
-$("#expenseReceipt").addEventListener("change",async e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>350000){toast("Para esta versión, el archivo debe pesar menos de 350 KB.");e.target.value="";return}receiptCache=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)});$("#receiptPreview").innerHTML=`<span>📎</span><div><b>${esc(f.name)}</b><small>${Math.round(f.size/1024)} KB · se guardará con el gasto</small></div>`});
+function renderAttachmentPreview(){
+  if(!attachmentCache.length){
+    $("#receiptPreview").innerHTML=`<span>▧</span><div><b>Sin comprobantes</b><small>Puedes adjuntar varias fotos o PDFs.</small></div>`;
+    return;
+  }
+  $("#receiptPreview").innerHTML=`<div class="attachment-list">${attachmentCache.map((a,i)=>`<div class="attachment-item"><span>📎</span><div><b>${esc(a.name||"Archivo")}</b><small>${esc(a.type||"archivo")}</small></div><button type="button" class="remove-attachment" data-index="${i}" title="Quitar">×</button></div>`).join("")}</div>`;
+  $$(".remove-attachment").forEach(b=>b.onclick=()=>{attachmentCache.splice(Number(b.dataset.index),1);renderAttachmentPreview()});
+}
+$("#expenseReceipt").addEventListener("change",async e=>{
+  const files=[...(e.target.files||[])];
+  if(!files.length)return;
+  for(const f of files){
+    if(f.size>350000){toast(`${f.name} pesa más de 350 KB y no se agregó.`);continue}
+    const data=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)});
+    attachmentCache.push({name:f.name,type:f.type||"archivo",size:f.size,data});
+  }
+  e.target.value="";
+  renderAttachmentPreview();
+});
 
 $("#expenseForm").onsubmit=async e=>{
   e.preventDefault();const amount=parseFloat($("#expenseAmount").value),ids=selectedIds();if(!(amount>0)){toast("Ingresa un monto válido.");return}if(!ids.length){toast("Selecciona al menos una persona.");return}
   let shares={},splitValues={}; if(currentSplit==="equal"){ids.forEach(id=>shares[id]=amount/ids.length)}else{const vals={};$$(".split-input").forEach(i=>vals[i.dataset.id]=parseFloat(i.value)||0);splitValues=vals;if(currentSplit==="amount"){const sum=Object.values(vals).reduce((a,b)=>a+b,0);if(Math.abs(sum-amount)>.01){toast(`La división debe sumar ${money(amount)}.`);return}shares=vals}else{const sum=Object.values(vals).reduce((a,b)=>a+b,0);if(Math.abs(sum-100)>.05){toast("Los porcentajes deben sumar 100%.");return}ids.forEach(id=>shares[id]=amount*(vals[id]||0)/100)}}
-  const f=$("#expenseReceipt").files?.[0];
-  const data={amount,description:$("#expenseDescription").value.trim(),date:$("#expenseDate").value,category:$("#expenseCategory").value,payerId:$("#expensePayer").value,participantIds:ids,splitMode:currentSplit,splitValues,shares,notes:$("#expenseNotes").value.trim(),receiptData:receiptCache||null,receiptName:f?.name||expenses.find(x=>x.id===$("#expenseId").value)?.receiptName||null,receiptType:f?.type||expenses.find(x=>x.id===$("#expenseId").value)?.receiptType||null,updatedAt:serverTimestamp()};
+  const data={amount,description:$("#expenseDescription").value.trim(),date:$("#expenseDate").value,category:$("#expenseCategory").value,payerId:$("#expensePayer").value,participantIds:ids,splitMode:currentSplit,splitValues,shares,notes:$("#expenseNotes").value.trim(),attachments:attachmentCache,receiptData:null,receiptName:null,receiptType:null,updatedAt:serverTimestamp()};
   try{const id=$("#expenseId").value;if(id)await setDoc(doc(db,"households",householdId,"expenses",id),data,{merge:true});else await addDoc(collection(db,"households",householdId,"expenses"),{...data,createdBy:me.uid,createdAt:serverTimestamp()});closeSheets();toast(id?"Gasto actualizado ✓":"Gasto agregado ✓")}catch(err){console.error(err);toast("No se pudo guardar el gasto.")}
 };
 $("#deleteExpense").onclick=async()=>{const id=$("#expenseId").value;if(!id||!confirm("¿Eliminar este gasto?"))return;try{await deleteDoc(doc(db,"households",householdId,"expenses",id));closeSheets();toast("Gasto eliminado")}catch(e){toast("No tienes permiso para eliminarlo.")}};
@@ -219,10 +238,57 @@ function renderCalendar(){
 
 $("#closeMonthBtn").onclick=async()=>{if(!isOwner())return;const existing=closings[activeMonth];try{if(existing){if(!confirm("¿Reabrir este mes? Quedará registrado."))return;await setDoc(doc(db,"households",householdId,"monthlyClosings",activeMonth),{status:"open",reopenedBy:me.uid,reopenedAt:serverTimestamp()},{merge:true});toast("Mes reabierto")}else{if(settlementPlan().length&&!confirm("Aún hay saldos pendientes. ¿Cerrar de todas formas?"))return;await setDoc(doc(db,"households",householdId,"monthlyClosings",activeMonth),{status:"closed",closedBy:me.uid,closedAt:serverTimestamp(),total:monthExpenses().reduce((s,e)=>s+Number(e.amount||0),0)},{merge:true});toast("Mes cerrado ✓")}}catch(e){console.error(e);toast("No se pudo actualizar el cierre.")}};
 
-$("#printReport").onclick=()=>window.print();
 
-function go(view){$$(".page").forEach(p=>p.classList.remove("active"));$("#"+view+"Page").classList.add("active");$$("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));const titles={home:`Buenos días, ${(me?.displayName||"").split(" ")[0]||"familia"} 👋`,activity:"Actividad",balances:"Saldos",month:"Estado del mes",members:"Miembros",admin:"Administración"};$("#pageTitle").textContent=titles[view]||"Mi Casa";window.scrollTo({top:0,behavior:"smooth"})}
-$$("[data-view]").forEach(b=>b.onclick=()=>go(b.dataset.view));$$("[data-jump]").forEach(b=>b.onclick=()=>go(b.dataset.jump));$("#profileBtn").onclick=()=>{const mm=myMember();if(mm)openMemberDetail(mm.id);else go("members")};
-go("home");
+
+function go(view){
+  if((view==="members"||view==="admin")&&!isOwner()){view="home";toast(uiLang==="en"?"This section is only available to the Owner.":"Esta sección es solo para el Owner.")}
+  $$(".page").forEach(p=>p.classList.remove("active"));$("#"+view+"Page").classList.add("active");$$("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+  const titles=uiLang==="en"?{home:`Good morning, ${(me?.displayName||"").split(" ")[0]||"family"} 👋`,activity:"Activity",balances:"Balances",month:"Monthly statement",members:"Members",admin:"Administration"}:{home:`Buenos días, ${(me?.displayName||"").split(" ")[0]||"familia"} 👋`,activity:"Actividad",balances:"Saldos",month:"Estado del mes",members:"Miembros",admin:"Administración"};
+  $("#pageTitle").textContent=titles[view]||"Mi Casa";applyLanguage();window.scrollTo({top:0,behavior:"smooth"})
+}
+$$("[data-view]").forEach(b=>b.onclick=()=>go(b.dataset.view));$$("[data-jump]").forEach(b=>b.onclick=()=>{const v=b.dataset.jump;if(v==="members"&&!isOwner())return;go(v)});
+$("#profileBtn").onclick=()=>{const mm=myMember();if(mm)openMemberDetail(mm.id)};
+
+// --- Bilingual UI (ES / EN) ---
+const EN={
+"Inicio":"Home","Actividad":"Activity","Saldos":"Balances","Mes":"Month","Miembros":"Members","Admin":"Admin",
+"Nuevo gasto":"New expense","Gastos del mes":"Monthly spending","movimientos":"transactions","Sin comparación aún":"No comparison yet",
+"Te deben":"Owed to you","Tú debes":"You owe","Balance personal":"Personal balance","Presupuesto usado":"Budget used",
+"Agregar gasto":"Add expense","Registra un pago":"Record a payment","Saldar":"Settle up","Quién paga a quién":"Who pays whom",
+"Presupuestos":"Budgets","Control por categoría":"Category control","Calendario y cierre":"Calendar & close",
+"Lo importante este mes":"This month at a glance","Balances":"Balances","Ver miembros":"View members","PENDIENTES":"PENDING",
+"Ver todos":"View all","ESTE MES":"THIS MONTH","En qué gastamos":"Where we spent","Recientes":"Recent","Ver todo":"View all",
+"MOVIMIENTOS":"TRANSACTIONS","Todas las categorías":"All categories","Deudas simplificadas":"Simplified debts",
+"Reducimos los cruces para dejar la menor cantidad posible de transferencias.":"We simplify debts to minimize the number of transfers.",
+"HISTORIAL":"HISTORY","Pagos registrados":"Recorded payments","ESTADO DE CUENTA":"MONTHLY STATEMENT","Reporte PDF":"PDF Report",
+"Cerrar mes":"Close month","CALENDARIO":"CALENDAR","Compromisos del mes":"Monthly commitments","Recurrente":"Recurring",
+"PRÓXIMOS":"UPCOMING","Pagos recurrentes":"Recurring payments","Resumen por persona":"Summary by person",
+"MI CASA":"MY HOME","Toca un miembro para abrir su perfil financiero.":"Tap a member to open their financial profile.",
+"Agregar miembro":"Add member","Administración":"Administration","Controla acceso, recuperación de cuenta y estructura del hogar.":"Manage access, account recovery, and household structure.",
+"Seguridad":"Security","Las contraseñas nunca son visibles. Puedes enviar un enlace seguro de restablecimiento.":"Passwords are never visible. You can send a secure reset link.",
+"Cancelar":"Cancel","Guardar":"Save","¿En qué se gastó?":"What was it for?","Fecha":"Date","Categoría":"Category","Pagó":"Paid by",
+"¿Para quién fue?":"Who was it for?","Comprobante":"Receipt","Nota":"Note","Cerrar":"Close","Perfil financiero":"Financial profile",
+"Casa":"Home","Comida":"Food","Servicios":"Utilities","Teléfono":"Phone","Transporte":"Transportation","Salud":"Health","Suscripciones":"Subscriptions","Otros":"Other"
+};
+function translateText(root=document.body){if(uiLang!=="en")return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;while(n=walker.nextNode()){const raw=n.nodeValue,trim=raw.trim();if(!trim)continue;let out=EN[trim];if(!out){for(const [es,en] of Object.entries(EN)){if(trim.startsWith(es+" ")){out=en+trim.slice(es.length);break}}}if(out)n.nodeValue=raw.replace(trim,out)}document.querySelectorAll("input[placeholder]").forEach(el=>{const p=el.placeholder;if(EN[p])el.placeholder=EN[p]});document.documentElement.lang="en"}
+function applyLanguage(){if(uiLang==="en")translateText();const b=$("#languageToggle");if(b)b.textContent=uiLang==="es"?"ES / EN":"EN / ES"}
+$("#languageToggle")?.addEventListener("click",()=>{uiLang=uiLang==="es"?"en":"es";localStorage.setItem("miCasaLanguage",uiLang);location.reload()});
+const langObserver=new MutationObserver(()=>{if(uiLang==="en")translateText()});langObserver.observe(document.body,{childList:true,subtree:true});
+
+// --- PDF report with independent language choice ---
+function reportHTML(lang){
+ const en=lang==="en", ex=monthExpenses(), {paid,share,balances}=calc(), total=ex.reduce((a,e)=>a+Number(e.amount||0),0);
+ const L=en?{title:"Mi Casa · Monthly Report",period:"Period",summary:"Summary",total:"Total spending",expenses:"Expenses",date:"Date",desc:"Description",cat:"Category",payer:"Paid by",amount:"Amount",people:"Summary by person",paid:"Paid",share:"Share",balance:"Balance",none:"No expenses recorded",attachments:"Attachments"}:{title:"Mi Casa · Reporte mensual",period:"Período",summary:"Resumen",total:"Gastos totales",expenses:"Gastos",date:"Fecha",desc:"Descripción",cat:"Categoría",payer:"Pagó",amount:"Monto",people:"Resumen por persona",paid:"Pagó",share:"Parte",balance:"Balance",none:"No hay gastos registrados",attachments:"Comprobantes"};
+ const cat=x=>en?(EN[x]||x):x;
+ const rows=ex.length?ex.map(e=>`<tr><td>${esc(e.date)}</td><td>${esc(e.description)}</td><td>${esc(cat(e.category||"Otros"))}</td><td>${esc(member(e.payerId).name)}</td><td class="num">${money(e.amount)}</td></tr>`).join(""):`<tr><td colspan="5">${L.none}</td></tr>`;
+ const prows=members.map(m=>`<tr><td>${esc(m.name)}</td><td class="num">${money(paid[m.id]||0)}</td><td class="num">${money(share[m.id]||0)}</td><td class="num">${money(balances[m.id]||0)}</td></tr>`).join("");
+ return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><title>${L.title}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#142033;margin:42px}header{border-bottom:3px solid #173b5f;padding-bottom:20px;margin-bottom:28px}.brand{font-size:13px;letter-spacing:.18em;color:#65758b}.total{font-size:38px;font-weight:800;margin:8px 0}h1{margin:6px 0}h2{margin-top:34px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:11px 8px;border-bottom:1px solid #e4e9ef;text-align:left;font-size:13px}.num{text-align:right}th{font-size:11px;text-transform:uppercase;color:#6d7b8d}.meta{color:#6d7b8d}@media print{body{margin:20px}@page{size:auto;margin:14mm}}</style></head><body><header><div class="brand">MI CASA</div><h1>${L.title}</h1><div class="meta">${L.period}: ${esc(monthLabel(activeMonth))}</div><div class="total">${money(total)}</div><div class="meta">${ex.length} ${en?"transactions":"gastos"}</div></header><h2>${L.expenses}</h2><table><thead><tr><th>${L.date}</th><th>${L.desc}</th><th>${L.cat}</th><th>${L.payer}</th><th class="num">${L.amount}</th></tr></thead><tbody>${rows}</tbody></table><h2>${L.people}</h2><table><thead><tr><th>${en?"Person":"Persona"}</th><th class="num">${L.paid}</th><th class="num">${L.share}</th><th class="num">${L.balance}</th></tr></thead><tbody>${prows}</tbody></table><script>window.onload=()=>setTimeout(()=>window.print(),250)<\/script></body></html>`
+}
+function printReportIn(lang){const w=window.open("","_blank");if(!w){toast(uiLang==="en"?"Allow pop-ups to generate the PDF.":"Permite ventanas emergentes para generar el PDF.");return}w.document.open();w.document.write(reportHTML(lang));w.document.close()}
+$("#printReport").onclick=()=>$("#reportLanguageModal").classList.remove("hidden");
+$("#reportLanguageCancel").onclick=()=>$("#reportLanguageModal").classList.add("hidden");
+$("#reportSpanish").onclick=()=>{$("#reportLanguageModal").classList.add("hidden");printReportIn("es")};
+$("#reportEnglish").onclick=()=>{$("#reportLanguageModal").classList.add("hidden");printReportIn("en")};
+applyLanguage();
 
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(console.warn));
