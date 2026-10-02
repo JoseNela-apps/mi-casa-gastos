@@ -58,27 +58,28 @@ $("#houseForm").onsubmit=async e=>{
   try{
     if(button){button.disabled=true;button.textContent="Creando…";}
 
-    // IMPORTANTE:
-    // Se crea primero el hogar y después el documento del owner.
-    // Firestore no puede evaluar con get() un documento que todavía
-    // no existe fuera de un batch durante el bootstrap inicial.
-    const href=doc(collection(db,"households"));
+    // V3.2: el ID del hogar inicial es el UID del owner.
+    // Así el bootstrap puede validarse únicamente con request.auth,
+    // sin depender de lecturas de documentos que aún no existen.
+    const hid=me.uid;
+    const href=doc(db,"households",hid);
 
     await setDoc(href,{
       name,
       ownerId:me.uid,
       createdAt:serverTimestamp()
-    });
+    },{merge:true});
 
     await setDoc(
-      doc(db,"households",href.id,"members",me.uid),
+      doc(db,"households",hid,"members",me.uid),
       {
         name:me.displayName||me.email.split("@")[0],
         email:me.email,
         role:"owner",
         authUid:me.uid,
         createdAt:serverTimestamp()
-      }
+      },
+      {merge:true}
     );
 
     await setDoc(
@@ -86,18 +87,18 @@ $("#houseForm").onsubmit=async e=>{
       {
         name:me.displayName||me.email.split("@")[0],
         email:me.email,
-        householdId:href.id
+        householdId:hid
       },
       {merge:true}
     );
 
-    householdId=href.id;
+    householdId=hid;
     await startApp();
     toast("Tu hogar está listo ✓");
   }catch(err){
-    console.error("CREATE_HOUSEHOLD_ERROR",err);
+    console.error("CREATE_HOUSEHOLD_ERROR",err?.code,err?.message,err);
     toast(err?.code==="permission-denied"
-      ?"Firebase bloqueó la creación. Revisa las reglas publicadas."
+      ?"Firestore sigue usando reglas antiguas. Publica FIREBASE_RULES.txt."
       :"No se pudo crear el hogar.");
   }finally{
     if(button){button.disabled=false;button.textContent=originalText;}

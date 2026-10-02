@@ -1,25 +1,22 @@
-# Mi Casa · Gastos — V3.1
+# Mi Casa · Gastos — V3.2 Root Fix
 
-Corrección del alta inicial del hogar con Firebase.
+Esta versión elimina la dependencia circular que bloqueaba la creación inicial del hogar.
 
-## Qué se corrigió
-- El hogar se crea primero.
-- Después se crea el documento del owner en `members`.
-- Finalmente se enlaza el `householdId` al perfil del usuario.
-- Se actualizó el caché del Service Worker para evitar que GitHub Pages conserve el `app.js` anterior.
-- Se agregó un estado `Creando…` para evitar dobles clics.
+## CAMBIO IMPORTANTE
+El primer hogar usa el UID del propietario como ID del hogar. Esto permite que las reglas de Firestore validen el alta inicial usando directamente `request.auth.uid`.
 
-## Para actualizar GitHub Pages
-Sube/reemplaza estos archivos en la raíz del repositorio:
-- `index.html`
-- `styles.css`
-- `app.js`
-- `manifest.json`
-- `service-worker.js`
-- `README.md`
-- carpeta `icons`
+## PASO 1 — Firebase (obligatorio)
+Abre Firebase Console → Firestore Database → Reglas.
 
-Después espera a que GitHub Pages termine el deployment y recarga la app.
+Copia TODO el contenido de `FIREBASE_RULES.txt`, reemplaza las reglas actuales y pulsa **Publicar**.
 
-## Firebase
-Mantén Authentication y Firestore activos. Las reglas deben permitir que el owner cree el hogar y, una vez creado, cree su documento de miembro.
+Subir `FIREBASE_RULES.txt` a GitHub NO cambia las reglas de Firebase: hay que publicarlas en Firebase Console.
+
+## PASO 2 — GitHub
+Reemplaza los archivos del repositorio con los de este paquete y haz commit a `main`.
+
+## PASO 3 — Espera el deployment
+Espera a que GitHub Pages termine. Después cierra la pestaña anterior y vuelve a abrir la app.
+
+## Nota OAuth
+El aviso amarillo sobre dominio autorizado no causa el error de Firestore de creación del hogar. Antes de usar Google Sign-In, agrega `josenela-apps.github.io` a Authentication → Settings → Authorized domains.
