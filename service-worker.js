@@ -1,5 +1,31 @@
-const CACHE="mi-casa-v52-bilingual-owner-20261002";
-const ASSETS=["./","./index.html","./styles.css","./app.js","./manifest.json","./icons/icon.svg"];
-self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
-self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r}).catch(()=>caches.match(e.request).then(r=>r||caches.match("./index.html"))))});
+/* Mi Casa · Gastos — V5.3 auto-update */
+const VERSION = "2026.10.02-53";
+const CACHE = `mi-casa-${VERSION}`;
+const APP_SHELL = ["./","./index.html","./styles.css","./app.js","./manifest.json","./update-notifier.js","./icons/icon.svg"];
+
+self.addEventListener("install", event => {
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+});
+self.addEventListener("activate", event => {
+  event.waitUntil((async () => {
+    const keys=await caches.keys();
+    await Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)));
+    await self.clients.claim();
+    const clients=await self.clients.matchAll({type:"window",includeUncontrolled:true});
+    clients.forEach(c=>c.postMessage({type:"MI_CASA_UPDATED",version:VERSION}));
+  })());
+});
+self.addEventListener("message", event => { if(event.data?.type==="SKIP_WAITING") self.skipWaiting(); });
+self.addEventListener("fetch", event => {
+  if(event.request.method!=="GET") return;
+  const url=new URL(event.request.url); if(url.origin!==self.location.origin) return;
+  event.respondWith((async()=>{
+    try{
+      const fresh=await fetch(event.request,{cache:"no-store"});
+      const cache=await caches.open(CACHE); cache.put(event.request,fresh.clone());
+      return fresh;
+    }catch{
+      return (await caches.match(event.request)) || (event.request.mode==="navigate" ? caches.match("./index.html") : undefined);
+    }
+  })());
+});

@@ -92,6 +92,9 @@ function renderAll(){
   if(!householdId)return;
   const mex=monthExpenses(),total=mex.reduce((s,e)=>s+Number(e.amount||0),0),{paid,share,balances}=calc(),mine=myMember(),myBal=mine?balances[mine.id]||0:0;
   $("#monthTotal").textContent=money(total);$("#movementCount").textContent=`${mex.length} ${mex.length===1?"movimiento":"movimientos"}`;$("#owedToMe").textContent=money(Math.max(0,myBal));$("#iOwe").textContent=money(Math.max(0,-myBal));
+  const familyStack=$("#familyAvatarStack");if(familyStack)familyStack.innerHTML=members.slice(0,6).map(m=>`<span class="stack-avatar" title="${esc(m.name)}">${esc(initials(m.name))}</span>`).join("");
+  const status=$("#familyStatusMessage");if(status)status.textContent=total?`${members.length} personas · ${mex.length} movimientos registrados este mes.`:`${members.length} personas listas para organizar los gastos de la casa.`;
+  const pulse=$("#familyPulse");if(pulse){const planNow=settlementPlan(),tbNow=totalBudget(),remain=tbNow-total;pulse.innerHTML=`<div class="pulse-row"><span>◎</span><div><b>${planNow.length?planNow.length+" pagos por resolver":"Todo saldado"}</b><small>${planNow.length?"Revisa Saldos para mantener la casa al día.":"No hay transferencias pendientes."}</small></div></div><div class="pulse-row"><span>⌂</span><div><b>${tbNow?(remain>=0?money(remain)+" disponibles":money(Math.abs(remain))+" sobre presupuesto"):"Presupuesto sin configurar"}</b><small>${tbNow?"Según los límites definidos para este mes.":"Puedes definir límites por categoría."}</small></div></div><div class="pulse-row"><span>▧</span><div><b>${expenses.filter(e=>((e.attachments&&e.attachments.length)||e.receiptData)).length} gastos con comprobante</b><small>Las fotos y PDFs pueden abrirse desde cada gasto.</small></div></div>`}
   $("#statementTotal").textContent=money(total);
   const closed=!!closings[activeMonth];$("#statementMeta").textContent=`${mex.length} gastos · ${closed?"Mes cerrado":"Mes abierto"}`;$("#closeMonthBtn").textContent=closed?"Reabrir mes":"Cerrar mes";
 
@@ -190,13 +193,22 @@ function openExpense(e=null){
 ["#newExpenseBtn","#quickExpense","#activityAdd","#mobileAdd"].forEach(id=>$(id).onclick=()=>openExpense());
 $("#saveExpenseTop").onclick=()=>$("#expenseForm").requestSubmit();
 
+let viewerItems=[],viewerIndex=0;
+function attachmentKind(a){const t=String(a?.type||"").toLowerCase(),n=String(a?.name||"").toLowerCase();if(t.startsWith("image/")||/\.(png|jpe?g|gif|webp|heic)$/i.test(n))return"image";if(t==="application/pdf"||n.endsWith(".pdf"))return"pdf";return"file"}
+function attachmentThumb(a,i,removable=true){const kind=attachmentKind(a),visual=kind==="image"&&a.data?`<img src="${a.data}" alt="">`:kind==="pdf"?`<span class="file-tile pdf">PDF</span>`:`<span class="file-tile">FILE</span>`;return `<div class="attachment-item previewable-attachment" data-preview-index="${i}">${visual}<div class="attachment-meta"><b>${esc(a.name||"Archivo")}</b><small>${kind==="image"?"Imagen":kind==="pdf"?"PDF":esc(a.type||"Archivo")} · Toca para previsualizar</small></div>${removable?`<button type="button" class="remove-attachment" data-index="${i}" title="Quitar">×</button>`:""}</div>`}
+function openAttachmentViewer(items,index=0){viewerItems=(items||[]).filter(a=>a?.data);if(!viewerItems.length){toast(uiLang==="en"?"Preview unavailable.":"Vista previa no disponible.");return}viewerIndex=Math.max(0,Math.min(index,viewerItems.length-1));renderAttachmentViewer();$("#attachmentViewer").classList.remove("hidden");$("#attachmentViewer").setAttribute("aria-hidden","false")}
+function renderAttachmentViewer(){const a=viewerItems[viewerIndex];if(!a)return;const kind=attachmentKind(a),stage=$("#attachmentViewerStage");$("#attachmentViewerCount").textContent=`${viewerIndex+1} de ${viewerItems.length}`;$("#attachmentViewerName").textContent=a.name||"Comprobante";$("#attachmentViewerOpen").href=a.data;$("#attachmentViewerOpen").download=a.name||"comprobante";stage.innerHTML=kind==="image"?`<img src="${a.data}" alt="${esc(a.name||"Comprobante")}">`:kind==="pdf"?`<iframe src="${a.data}" title="${esc(a.name||"PDF")}"></iframe>`:`<div class="file-no-preview"><span>▧</span><b>${esc(a.name||"Archivo")}</b><p>Este tipo de archivo no tiene vista previa integrada.</p></div>`;$("#attachmentViewerPrev").disabled=viewerIndex===0;$("#attachmentViewerNext").disabled=viewerIndex===viewerItems.length-1}
+function closeAttachmentViewer(){$("#attachmentViewer").classList.add("hidden");$("#attachmentViewer").setAttribute("aria-hidden","true");$("#attachmentViewerStage").innerHTML=""}
+$("#attachmentViewerClose")?.addEventListener("click",closeAttachmentViewer);$("[data-close-preview]")?.addEventListener("click",closeAttachmentViewer);$("#attachmentViewerPrev")?.addEventListener("click",()=>{if(viewerIndex>0){viewerIndex--;renderAttachmentViewer()}});$("#attachmentViewerNext")?.addEventListener("click",()=>{if(viewerIndex<viewerItems.length-1){viewerIndex++;renderAttachmentViewer()}});document.addEventListener("keydown",e=>{if($("#attachmentViewer")?.classList.contains("hidden"))return;if(e.key==="Escape")closeAttachmentViewer();if(e.key==="ArrowLeft"&&viewerIndex>0){viewerIndex--;renderAttachmentViewer()}if(e.key==="ArrowRight"&&viewerIndex<viewerItems.length-1){viewerIndex++;renderAttachmentViewer()}});
+
 function renderAttachmentPreview(){
   if(!attachmentCache.length){
     $("#receiptPreview").innerHTML=`<span>▧</span><div><b>Sin comprobantes</b><small>Puedes adjuntar varias fotos o PDFs.</small></div>`;
     return;
   }
-  $("#receiptPreview").innerHTML=`<div class="attachment-list">${attachmentCache.map((a,i)=>`<div class="attachment-item"><span>📎</span><div><b>${esc(a.name||"Archivo")}</b><small>${esc(a.type||"archivo")}</small></div><button type="button" class="remove-attachment" data-index="${i}" title="Quitar">×</button></div>`).join("")}</div>`;
-  $$(".remove-attachment").forEach(b=>b.onclick=()=>{attachmentCache.splice(Number(b.dataset.index),1);renderAttachmentPreview()});
+  $("#receiptPreview").innerHTML=`<div class="attachment-list">${attachmentCache.map((a,i)=>attachmentThumb(a,i,true)).join("")}</div>`;
+  $$("#receiptPreview .previewable-attachment").forEach(el=>el.onclick=e=>{if(e.target.closest(".remove-attachment"))return;openAttachmentViewer(attachmentCache,Number(el.dataset.previewIndex))});
+  $$(".remove-attachment").forEach(b=>b.onclick=e=>{e.stopPropagation();attachmentCache.splice(Number(b.dataset.index),1);renderAttachmentPreview()});
 }
 $("#expenseReceipt").addEventListener("change",async e=>{
   const files=[...(e.target.files||[])];
@@ -254,7 +266,7 @@ const EN={
 "Inicio":"Home","Actividad":"Activity","Saldos":"Balances","Mes":"Month","Miembros":"Members","Admin":"Admin",
 "Nuevo gasto":"New expense","Gastos del mes":"Monthly spending","movimientos":"transactions","Sin comparación aún":"No comparison yet",
 "Te deben":"Owed to you","Tú debes":"You owe","Balance personal":"Personal balance","Presupuesto usado":"Budget used",
-"Agregar gasto":"Add expense","Registra un pago":"Record a payment","Saldar":"Settle up","Quién paga a quién":"Who pays whom",
+"Agregar gasto":"Add expense","Registra un pago":"Record a payment","Saldar":"Settle up","Quién paga a quién":"Who pays whom","ESTADO DE MI CASA":"MY HOME STATUS","Todo lo importante de la familia, en un solo lugar.":"Everything that matters to your family, in one place.","Gastos del mes":"Monthly spending","Presupuesto familiar":"Family budget","NUESTRA CASA":"OUR HOME","La familia este mes":"The family this month","Administrar":"Manage","PRESUPUESTO":"BUDGET","En qué estamos gastando":"Where we are spending","Ver límites":"View limits","PARA TI":"FOR YOU","Lo importante de Mi Casa":"What matters at home","RESUMEN":"SUMMARY","La casa al día":"Home at a glance","HISTORIA DE LA CASA":"HOME HISTORY","Actividad reciente":"Recent activity","Abrir original":"Open original","Anterior":"Previous","Siguiente":"Next",
 "Presupuestos":"Budgets","Control por categoría":"Category control","Calendario y cierre":"Calendar & close",
 "Lo importante este mes":"This month at a glance","Balances":"Balances","Ver miembros":"View members","PENDIENTES":"PENDING",
 "Ver todos":"View all","ESTE MES":"THIS MONTH","En qué gastamos":"Where we spent","Recientes":"Recent","Ver todo":"View all",

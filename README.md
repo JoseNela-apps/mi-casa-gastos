@@ -1,17 +1,17 @@
-# Mi Casa · Gastos — V5.2
+# Mi Casa · Gastos — V5.3 Family Home
 
-Actualización V5.2 lista para GitHub Pages.
+Archivos para subir a GitHub Pages. Esta entrega NO incluye reglas de Firebase porque no se requieren cambios de permisos.
 
-## Cambios
-- Sección **Miembros** visible únicamente para el Owner/Admin.
-- Sección **Admin** visible únicamente para el Owner/Admin.
-- Un Member que intente navegar manualmente a esas vistas es redirigido a Inicio.
-- Selector **ES / EN** en la barra superior; la preferencia queda guardada en el navegador.
-- Interfaz bilingüe español/inglés.
-- **Reporte PDF** pregunta primero si se desea Español o English y genera el reporte en ese idioma.
-- Se mantiene soporte para **múltiples comprobantes** por gasto de V5.1.
+## Novedades
+- Rediseño completo “Family Home”.
+- Estado de Mi Casa, familia, presupuesto, resumen y actividad con nueva jerarquía visual.
+- Previsualización de imágenes y PDFs antes y después de guardar un gasto.
+- Galería de múltiples comprobantes con anterior/siguiente y abrir original.
+- Conserva ES/EN, PDF bilingüe, Owner/Member, presupuestos, saldos y múltiples adjuntos.
+- Service worker V5.3 + aviso de actualización dentro de la app.
 
-## Instalación
-Reemplaza en GitHub los archivos de este paquete y haz Commit. No necesitas cambiar las reglas de Firebase para esta actualización de interfaz.
+## Subida
+Reemplaza en GitHub: index.html, app.js, styles.css, manifest.json, service-worker.js y agrega update-notifier.js.
+Conserva la carpeta icons/ existente.
 
-> Nota: los comprobantes siguen almacenándose con la estrategia actual de V5.1; Firebase Storage continúa siendo la opción recomendada para archivos grandes.
+Nota: los adjuntos siguen guardándose en Firestore en esta versión y conservan el límite actual por archivo.
