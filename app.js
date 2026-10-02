@@ -64,12 +64,12 @@ async function startApp(){
   $("#adminNav").classList.toggle("hidden",!isOwner());$("#membersNav")?.classList.toggle("hidden",!isOwner());$$(".owner-only").forEach(x=>x.classList.toggle("hidden",!isOwner()));$(".side-user small").textContent=isOwner()?"Owner":"Member";
   $("#monthEyebrow").textContent=monthLabel(activeMonth).toUpperCase();$("#statementMonth").textContent=cap(monthLabel(activeMonth));
   beginInitialLoad();
-  unsubs.push(onSnapshot(collection(db,"households",householdId,"members"),s=>{members=s.docs.map(d=>({id:d.id,...d.data()}));dataReady.members=true;scheduleRender()}));
-  unsubs.push(onSnapshot(query(collection(db,"households",householdId,"expenses"),orderBy("date","desc")),s=>{expenses=s.docs.map(d=>({id:d.id,...d.data()}));dataReady.expenses=true;scheduleRender()}));
-  unsubs.push(onSnapshot(collection(db,"households",householdId,"settlements"),s=>{settlements=s.docs.map(d=>({id:d.id,...d.data()}));dataReady.settlements=true;scheduleRender()}));
-  unsubs.push(onSnapshot(collection(db,"households",householdId,"budgets"),s=>{budgets={};s.docs.forEach(d=>budgets[d.id]=d.data());dataReady.budgets=true;scheduleRender()}));
-  unsubs.push(onSnapshot(collection(db,"households",householdId,"recurring"),s=>{recurrings=s.docs.map(d=>({id:d.id,...d.data()}));dataReady.recurring=true;scheduleRender()}));
-  unsubs.push(onSnapshot(collection(db,"households",householdId,"monthlyClosings"),s=>{closings={};s.docs.forEach(d=>closings[d.id]=d.data());dataReady.closings=true;scheduleRender()}));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"members"),s=>{members=s.docs.map(d=>({id:d.id,...d.data()}));markDataReady("members")},e=>streamFailed("members",e)));
+  unsubs.push(onSnapshot(query(collection(db,"households",householdId,"expenses"),orderBy("date","desc")),s=>{expenses=s.docs.map(d=>({id:d.id,...d.data()}));markDataReady("expenses")},e=>streamFailed("expenses",e)));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"settlements"),s=>{settlements=s.docs.map(d=>({id:d.id,...d.data()}));markDataReady("settlements")},e=>streamFailed("settlements",e)));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"budgets"),s=>{budgets={};s.docs.forEach(d=>budgets[d.id]=d.data());markDataReady("budgets")},e=>streamFailed("budgets",e)));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"recurring"),s=>{recurrings=s.docs.map(d=>({id:d.id,...d.data()}));markDataReady("recurring")},e=>streamFailed("recurring",e)));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"monthlyClosings"),s=>{closings={};s.docs.forEach(d=>closings[d.id]=d.data());markDataReady("closings")},e=>streamFailed("closings",e)));
 }
 
 
@@ -80,10 +80,17 @@ function beginInitialLoad(){
   document.body.classList.add("app-loading");
 }
 function allDataReady(){return Object.values(dataReady).every(Boolean)}
+function markDataReady(key){dataReady[key]=true;scheduleRender()}
+function streamFailed(key,error){
+  console.error(`Mi Casa: ${key} could not load`,error);
+  dataReady[key]=true;
+  scheduleRender();
+  if(key==="budgets"||key==="recurring") console.warn(`Optional ${key} stream unavailable; core UI will continue.`);
+}
 function scheduleRender(){
   if(!allDataReady())return;
   clearTimeout(renderTimer);
-  renderTimer=setTimeout(()=>{renderTimer=null;document.body.classList.remove("app-loading");renderAll()},70);
+  renderTimer=setTimeout(()=>{renderTimer=null;document.body.classList.remove("app-loading");renderAll()},55);
 }
 
 const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):s;

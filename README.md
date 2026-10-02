@@ -1,18 +1,19 @@
-# Mi Casa V6.1 — Mobile Performance
+# Mi Casa V6.2 — Calendar Fix
 
-Corrección de estabilidad y rendimiento sobre V6.
+Esta versión corrige el bloqueo de carga de V6.1.
 
-Cambios:
-- Corrige el error de V6 que detenía renderAll antes de calendario/miembros.
-- Espera a que los 6 streams iniciales de Firestore estén listos.
-- Agrupa actualizaciones Firebase en un solo render (debounce).
-- Restaura el calendario mensual completo.
-- Calendario móvil compacto con indicadores de gastos/recurrentes.
-- Estados vacíos reales para pagos recurrentes.
-- Skeletons mientras cargan Firebase.
-- Menos blur/sombras costosas en Safari/iPhone.
-- Scroll de navegación sin animación costosa.
-- Service Worker V6.1 para evitar mezclar assets de versiones anteriores.
-- Conserva Family Finance, perfiles, avatares, comprobantes, ES/EN, PDF, saldos y recurrentes.
+Causa encontrada:
+las reglas finales anteriores no incluían las colecciones `budgets` y `recurring`.
+La V6.1 esperaba que los 6 streams terminaran antes de renderizar, así que un
+`permission-denied` en esas colecciones dejaba calendario, miembros y resumen
+mostrando skeletons indefinidamente.
 
-No requiere cambios adicionales en Firebase Rules.
+V6.2:
+- restaura el calendario completo;
+- agrega manejo de errores por stream: una colección opcional nunca congela la app;
+- conserva la carga agrupada para rendimiento móvil;
+- conserva calendario compacto en iPhone;
+- incluye las reglas Firestore completas corregidas con `budgets` y `recurring`;
+- actualiza el Service Worker para forzar assets V6.2.
+
+Para esta corrección SÍ es necesario publicar FIREBASE_RULES_FINAL_V6.2.txt.
