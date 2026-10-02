@@ -1,17 +1,11 @@
 {
-  "name": "Mi Casa · Gastos",
-  "short_name": "Mi Casa",
-  "start_url": "./",
-  "scope": "./",
-  "display": "standalone",
-  "background_color": "#f5f7fb",
-  "theme_color": "#f5f7fb",
-  "icons": [
-    {
-      "src": "./icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
+  "name":"Mi Casa Finance",
+  "short_name":"Mi Casa",
+  "start_url":"./",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"#f3f6fb",
+  "theme_color":"#173b60",
+  "description":"Finanzas familiares compartidas, presupuestos, pagos y cierres mensuales.",
+  "icons":[{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }

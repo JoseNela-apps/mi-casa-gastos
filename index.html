@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#f5f7fb">
-  <title>Mi Casa · Gastos</title>
+  <meta name="theme-color" content="#f3f6fb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Mi Casa · Finance</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/icon.svg">
   <link rel="stylesheet" href="./styles.css">
@@ -15,35 +17,33 @@
 <section id="authView" class="auth-view">
   <div class="auth-art">
     <div class="brand-mark">⌂</div>
-    <div>
-      <span class="eyebrow">MI CASA</span>
-      <h1>Las cuentas de casa,<br>por fin simples.</h1>
-      <p>Gastos, balances y pagos de toda la familia en un mismo lugar.</p>
+    <div class="auth-copy">
+      <span class="eyebrow">MI CASA FINANCE</span>
+      <h1>Las finanzas de casa,<br>claras para todos.</h1>
+      <p>Gastos, presupuestos, pagos y cierres mensuales en un solo lugar.</p>
     </div>
     <div class="preview-stack">
-      <div class="mini-card"><span>Gastos del mes</span><b>$3,842.17</b><small>Todo organizado ✓</small></div>
-      <div class="mini-person"><i>NB</i><span><b>Nela</b><small>Te deben $248.40</small></span></div>
+      <div class="mini-card"><span>Un solo hogar</span><b>Privado · Compartido</b><small>Datos reales, sin montos de demostración.</small></div>
+      <div class="mini-person"><i>✓</i><span><b>Acceso por invitación</b><small>Solo miembros autorizados</small></span></div>
     </div>
   </div>
-
   <div class="auth-panel">
     <div class="auth-box">
       <div class="mobile-logo"><span>⌂</span> Mi Casa</div>
       <div class="segmented"><button id="loginTab" class="active">Entrar</button><button id="registerTab">Activar acceso</button></div>
-
       <form id="loginForm">
         <h2>Qué bueno verte</h2><p>Entra para ver las cuentas de tu casa.</p>
         <label>Email<input id="loginEmail" type="email" autocomplete="email" required placeholder="tu@email.com"></label>
         <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="••••••••"></label>
-        <button class="primary wide" type="submit">Entrar</button><button id="forgotPassword" class="text-btn wide" type="button">Olvidé mi contraseña</button>
+        <button class="primary wide" type="submit">Entrar</button>
+        <button id="forgotPassword" class="text-btn wide" type="button">Olvidé mi contraseña</button>
       </form>
-
       <form id="registerForm" class="hidden">
-        <h2>Crea tu cuenta</h2><p>Serás la primera persona de tu hogar.</p>
-        <label>Tu nombre<input id="registerName" required maxlength="40" placeholder="Nela"></label>
+        <h2>Activa tu acceso</h2><p>Tu administrador debe haberte agregado antes como miembro.</p>
+        <label>Tu nombre<input id="registerName" required maxlength="40" placeholder="Tu nombre"></label>
         <label>Email<input id="registerEmail" type="email" autocomplete="email" required placeholder="tu@email.com"></label>
         <label>Contraseña<input id="registerPassword" type="password" autocomplete="new-password" required minlength="6" placeholder="Mínimo 6 caracteres"></label>
-        <button class="primary wide" type="submit">Activar acceso</button>
+        <button class="primary wide" type="submit">Activar mi acceso</button>
       </form>
       <div id="authError" class="form-error"></div>
     </div>
@@ -54,8 +54,8 @@
   <div class="auth-card">
     <div class="brand-mark">⌂</div>
     <span class="eyebrow">ACCESO PENDIENTE</span>
-    <h1>Esta cuenta no pertenece a Mi Casa</h1>
-    <p>Solo Alberto, el Owner, puede crear y administrar el hogar. Si ya te agregó como miembro, usa el mismo email de la invitación.</p>
+    <h1>Esta cuenta aún no pertenece a Mi Casa</h1>
+    <p>Solo el Owner puede autorizar miembros. Si ya fuiste agregado, usa exactamente el mismo email de tu invitación.</p>
     <button id="claimInviteBtn" class="primary wide" type="button">Entrar con mi invitación</button>
     <button id="setupLogout" class="text-btn wide" type="button">Cerrar sesión</button>
   </div>
@@ -63,7 +63,7 @@
 
 <section id="appView" class="app hidden">
   <aside class="sidebar">
-    <div class="side-brand"><span>⌂</span><div><small>MI CASA</small><b id="sideHouse">Gastos</b></div></div>
+    <div class="side-brand"><span>⌂</span><div><small>MI CASA</small><b id="sideHouse">Finance</b></div></div>
     <nav>
       <button class="nav active" data-view="home"><span>⌂</span>Inicio</button>
       <button class="nav" data-view="activity"><span>≡</span>Actividad</button>
@@ -73,30 +73,37 @@
       <button id="adminNav" class="nav hidden" data-view="admin"><span>⚙</span>Admin</button>
     </nav>
     <div class="side-user">
-      <div id="sideAvatar" class="avatar">N</div>
-      <div><b id="sideName">Usuario</b><small>Owner</small></div>
+      <div id="sideAvatar" class="avatar">?</div>
+      <div><b id="sideName">Usuario</b><small>Member</small></div>
       <button id="logoutBtn" title="Cerrar sesión">↗</button>
     </div>
   </aside>
 
   <main class="main">
     <header class="topbar">
-      <div><span class="eyebrow" id="monthEyebrow">OCTUBRE 2026</span><h1 id="pageTitle">Buenos días 👋</h1></div>
-      <div class="top-actions"><button class="icon-btn" id="profileBtn">☺</button><button class="primary" id="newExpenseBtn">＋ Nuevo gasto</button></div>
+      <div><span class="eyebrow" id="monthEyebrow"></span><h1 id="pageTitle">Mi Casa</h1></div>
+      <div class="top-actions"><button class="icon-btn" id="profileBtn" title="Mi perfil">☺</button><button class="primary" id="newExpenseBtn">＋ Nuevo gasto</button></div>
     </header>
 
     <div id="homePage" class="page active">
-      <section class="hero">
-        <div class="hero-main"><span>Gastos del mes</span><strong id="monthTotal">$0.00</strong><small id="movementCount">0 movimientos</small></div>
-        <div class="hero-stat"><span>Te deben</span><b id="owedToMe">$0.00</b></div>
-        <div class="hero-stat"><span>Tú debes</span><b id="iOwe">$0.00</b></div>
+      <section class="hero premium-hero">
+        <div class="hero-main"><span>Gastos del mes</span><strong id="monthTotal">$0.00</strong><small id="movementCount">0 movimientos</small><div id="monthTrend" class="trend-pill">Sin comparación aún</div></div>
+        <div class="hero-stat"><span>Te deben</span><b id="owedToMe">$0.00</b><small>Balance personal</small></div>
+        <div class="hero-stat"><span>Tú debes</span><b id="iOwe">$0.00</b><small>Balance personal</small></div>
+        <div class="hero-budget"><span>Presupuesto usado</span><b id="budgetUsed">—</b><div class="budget-progress"><i id="budgetProgress"></i></div></div>
         <div class="hero-orb"></div>
       </section>
 
       <section class="quick-row">
         <button id="quickExpense"><span class="quick-icon">＋</span><b>Agregar gasto</b><small>Registra un pago</small></button>
-        <button data-jump="balances"><span class="quick-icon">⇄</span><b>Saldar</b><small>Ver quién paga</small></button>
-        <button data-jump="month"><span class="quick-icon">▣</span><b>Estado del mes</b><small>Resumen familiar</small></button>
+        <button data-jump="balances"><span class="quick-icon">⇄</span><b>Saldar</b><small>Quién paga a quién</small></button>
+        <button id="quickBudget"><span class="quick-icon">◔</span><b>Presupuestos</b><small>Control por categoría</small></button>
+        <button data-jump="month"><span class="quick-icon">▣</span><b>Mes</b><small>Calendario y cierre</small></button>
+      </section>
+
+      <section class="insights-card">
+        <div class="section-head compact"><div><span class="eyebrow">INSIGHTS</span><h2>Lo importante este mes</h2></div></div>
+        <div id="insightsGrid" class="insights-grid"></div>
       </section>
 
       <div class="section-head"><div><span class="eyebrow">FAMILIA</span><h2>Balances</h2></div><button data-jump="members">Ver miembros</button></div>
@@ -108,7 +115,7 @@
           <div id="settlementPreview"></div>
         </section>
         <section class="card">
-          <div class="section-head compact"><div><span class="eyebrow">ESTE MES</span><h2>En qué gastamos</h2></div></div>
+          <div class="section-head compact"><div><span class="eyebrow">ESTE MES</span><h2>En qué gastamos</h2></div><button id="editBudgetsBtn">Presupuestos</button></div>
           <div id="categoryList"></div>
         </section>
       </div>
@@ -122,23 +129,41 @@
     <div id="activityPage" class="page">
       <div class="page-card">
         <div class="section-head"><div><span class="eyebrow">MOVIMIENTOS</span><h2>Actividad</h2></div><button class="primary small" id="activityAdd">＋ Agregar</button></div>
+        <div class="filter-row">
+          <input id="activitySearch" placeholder="Buscar gasto…">
+          <select id="activityCategory"><option value="">Todas las categorías</option><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Suscripciones</option><option>Otros</option></select>
+        </div>
         <div id="activityList" class="feed"></div>
       </div>
     </div>
 
     <div id="balancesPage" class="page">
       <div class="page-card">
-        <span class="eyebrow">BALANCES</span><h2>Deudas simplificadas</h2>
-        <p class="muted">Calculamos la menor cantidad de pagos necesarios para dejar las cuentas en cero.</p>
+        <div class="section-head"><div><span class="eyebrow">BALANCES</span><h2>Deudas simplificadas</h2></div></div>
+        <p class="muted">Reducimos los cruces para dejar la menor cantidad posible de transferencias.</p>
         <div id="settlementList" class="settlement-list"></div>
+      </div>
+      <div class="page-card">
+        <div class="section-head"><div><span class="eyebrow">HISTORIAL</span><h2>Pagos registrados</h2></div></div>
+        <div id="settlementHistory" class="feed"></div>
       </div>
     </div>
 
     <div id="monthPage" class="page">
       <div class="statement">
-        <span class="eyebrow">ESTADO DE CUENTA</span><h2 id="statementMonth">Octubre 2026</h2>
+        <span class="eyebrow">ESTADO DE CUENTA</span><h2 id="statementMonth"></h2>
         <strong id="statementTotal">$0.00</strong><p id="statementMeta">0 gastos · Mes abierto</p>
-        <div class="statement-actions"><button class="secondary" id="printReport">Generar reporte</button><button class="primary" disabled title="Disponible en la siguiente etapa">Cerrar mes</button></div>
+        <div class="statement-actions"><button class="secondary" id="printReport">Reporte PDF</button><button class="primary owner-only" id="closeMonthBtn">Cerrar mes</button></div>
+      </div>
+      <div class="month-grid">
+        <div class="page-card">
+          <div class="section-head"><div><span class="eyebrow">CALENDARIO</span><h2>Compromisos del mes</h2></div><button id="addRecurringBtn" class="secondary small owner-only">＋ Recurrente</button></div>
+          <div id="financialCalendar" class="financial-calendar"></div>
+        </div>
+        <div class="page-card">
+          <div class="section-head"><div><span class="eyebrow">PRÓXIMOS</span><h2>Pagos recurrentes</h2></div></div>
+          <div id="recurringList"></div>
+        </div>
       </div>
       <div class="page-card"><h2>Resumen por persona</h2><div id="monthPeople"></div></div>
     </div>
@@ -146,7 +171,7 @@
     <div id="membersPage" class="page">
       <div class="page-card">
         <div class="section-head"><div><span class="eyebrow">MI CASA</span><h2>Miembros</h2></div><button class="primary small owner-only" id="inviteBtn">＋ Agregar miembro</button></div>
-        <p class="muted">Cada persona puede tener su propia cuenta. El Owner administra accesos, pero las contraseñas nunca son visibles.</p>
+        <p class="muted">Toca un miembro para abrir su perfil financiero.</p>
         <div id="membersList" class="members-list"></div>
       </div>
     </div>
@@ -154,8 +179,8 @@
     <div id="adminPage" class="page">
       <div class="page-card">
         <div class="section-head"><div><span class="eyebrow">OWNER</span><h2>Administración</h2></div></div>
-        <p class="muted">Controla quién entra a Mi Casa, roles y recuperación de acceso.</p>
-        <div class="admin-callout"><b>Seguridad</b><p>Firebase no permite ver contraseñas. Puedes enviar un restablecimiento seguro al email del usuario.</p></div>
+        <p class="muted">Controla acceso, recuperación de cuenta y estructura del hogar.</p>
+        <div class="admin-callout"><b>Seguridad</b><p>Las contraseñas nunca son visibles. Puedes enviar un enlace seguro de restablecimiento.</p></div>
         <div id="adminUsers" class="members-list"></div>
       </div>
     </div>
@@ -166,7 +191,7 @@
     <button data-view="activity"><span>≡</span><small>Actividad</small></button>
     <button id="mobileAdd" class="add"><span>＋</span></button>
     <button data-view="balances"><span>⇄</span><small>Saldos</small></button>
-    <button data-view="members"><span>◎</span><small>Miembros</small></button>
+    <button data-view="month"><span>▣</span><small>Mes</small></button>
   </nav>
 </section>
 
@@ -179,11 +204,18 @@
     <input id="expenseId" type="hidden">
     <div class="amount-wrap"><span>$</span><input id="expenseAmount" inputmode="decimal" placeholder="0.00" required></div>
     <label>¿En qué se gastó?<input id="expenseDescription" required maxlength="80" placeholder="Ej. Internet, supermercado…"></label>
-    <div class="form-grid"><label>Fecha<input id="expenseDate" type="date" required></label><label>Categoría<select id="expenseCategory"><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Otros</option></select></label></div>
+    <div class="form-grid"><label>Fecha<input id="expenseDate" type="date" required></label><label>Categoría<select id="expenseCategory"><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Suscripciones</option><option>Otros</option></select></label></div>
     <label>Pagó<select id="expensePayer"></select></label>
     <fieldset><legend>¿Para quién fue?</legend><div id="participantPicker" class="participant-picker"></div></fieldset>
-    <div class="split-box"><div><b>División</b><small>Se divide por igual entre los seleccionados.</small></div><span id="perPerson">$0.00 c/u</span></div>
-    <div class="receipt-placeholder"><span>▧</span><div><b>Adjuntar recibo</b><small>Preparado para imágenes y PDF</small></div><em>Próximamente</em></div>
+    <div class="split-mode">
+      <button type="button" class="split-tab active" data-split="equal">Igual</button>
+      <button type="button" class="split-tab" data-split="amount">Monto</button>
+      <button type="button" class="split-tab" data-split="percent">%</button>
+    </div>
+    <div id="splitBox" class="split-box"><div><b>División</b><small id="splitHelp">Se divide por igual.</small></div><span id="perPerson">$0.00 c/u</span></div>
+    <div id="customSplitRows" class="custom-split-rows hidden"></div>
+    <label class="receipt-input">Comprobante <span class="optional">(imagen pequeña o PDF)</span><input id="expenseReceipt" type="file" accept="image/*,application/pdf"></label>
+    <div id="receiptPreview" class="receipt-placeholder"><span>▧</span><div><b>Sin comprobante</b><small>Archivos pequeños pueden guardarse con el gasto.</small></div></div>
     <label>Nota <span class="optional">(opcional)</span><textarea id="expenseNotes" rows="2" maxlength="300" placeholder="Añade algún detalle…"></textarea></label>
     <button class="primary wide" type="submit">Guardar gasto</button>
     <button id="deleteExpense" class="danger wide hidden" type="button">Eliminar gasto</button>
@@ -195,10 +227,34 @@
   <div class="sheet-head"><button class="text-btn memberCancel">Cancelar</button><b>Agregar miembro</b><span></span></div>
   <form id="memberForm">
     <label>Nombre<input id="memberName" required maxlength="40" placeholder="Nombre"></label>
-    <label>Email <span class="optional">(requerido para darle acceso)</span><input id="memberEmail" type="email" placeholder="persona@email.com"></label>
-    <p class="info-note">Si agregas un email, se crea una invitación. La persona debe entrar/crear su cuenta con exactamente ese email y tocar “Buscar invitación”.</p>
+    <label>Email <span class="optional">(para darle acceso)</span><input id="memberEmail" type="email" placeholder="persona@email.com"></label>
+    <p class="info-note">El email debe coincidir exactamente con el que la persona usará para activar su acceso.</p>
     <button class="primary wide" type="submit">Agregar / invitar</button>
   </form>
+</aside>
+
+<aside id="budgetSheet" class="sheet small-sheet hidden">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn budgetCancel">Cancelar</button><b>Presupuestos</b><button id="saveBudgetsTop" class="text-btn accent">Guardar</button></div>
+  <form id="budgetForm"><div id="budgetRows" class="budget-rows"></div><button class="primary wide" type="submit">Guardar presupuestos</button></form>
+</aside>
+
+<aside id="recurringSheet" class="sheet small-sheet hidden">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn recurringCancel">Cancelar</button><b>Pago recurrente</b><span></span></div>
+  <form id="recurringForm">
+    <label>Nombre<input id="recurringName" required placeholder="Ej. Ameren"></label>
+    <div class="form-grid"><label>Monto<input id="recurringAmount" inputmode="decimal" required placeholder="0.00"></label><label>Día del mes<input id="recurringDay" type="number" min="1" max="31" required value="1"></label></div>
+    <label>Categoría<select id="recurringCategory"><option>Casa</option><option>Servicios</option><option>Teléfono</option><option>Suscripciones</option><option>Otros</option></select></label>
+    <label>Pagador<select id="recurringPayer"></select></label>
+    <button class="primary wide" type="submit">Guardar recurrente</button>
+  </form>
+</aside>
+
+<aside id="memberDetailSheet" class="sheet small-sheet hidden">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn detailCancel">Cerrar</button><b>Perfil financiero</b><span></span></div>
+  <div id="memberDetailContent"></div>
 </aside>
 
 <script type="module" src="./app.js"></script>

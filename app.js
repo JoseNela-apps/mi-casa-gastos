@@ -10,253 +10,219 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebas
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc, collection, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
-const fb = initializeApp(firebaseConfig);
-const auth = getAuth(fb);
-const db = getFirestore(fb);
-const $ = s => document.querySelector(s);
-const $$ = s => [...document.querySelectorAll(s)];
-const money = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(n||0));
-const esc = s => String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-const initials = n => String(n||"?").trim().split(/\s+/).slice(0,2).map(x=>x[0]?.toUpperCase()).join("");
-const today = () => new Date().toISOString().slice(0,10);
-const monthKey = d => (d||today()).slice(0,7);
-const currentMonth = monthKey();
-const monthLabel = (key=currentMonth) => { const [y,m]=key.split("-").map(Number); return new Intl.DateTimeFormat("es-US",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(Date.UTC(y,m-1,1))); };
-let me=null, householdId=null, household=null, members=[], expenses=[], unsubs=[];
-const emailKey = e => encodeURIComponent(String(e||"").trim().toLowerCase());
-const isOwner = () => !!(me && household && household.ownerId===me.uid);
+const fb=initializeApp(firebaseConfig),auth=getAuth(fb),db=getFirestore(fb);
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(n||0));
+const initials=n=>String(n||"?").trim().split(/\s+/).slice(0,2).map(x=>x[0]?.toUpperCase()).join("");
+const today=()=>new Date().toISOString().slice(0,10), monthKey=d=>(d||today()).slice(0,7);
+const nowMonth=()=>monthKey(), monthLabel=k=>{const [y,m]=k.split("-").map(Number);return new Intl.DateTimeFormat("es-US",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(Date.UTC(y,m-1,1)))};
+const emailKey=e=>encodeURIComponent(String(e||"").trim().toLowerCase());
+const CATS=["Casa","Comida","Servicios","Teléfono","Transporte","Salud","Suscripciones","Otros"];
+let me=null,householdId=null,household=null,members=[],expenses=[],settlements=[],budgets={},recurrings=[],closings={},unsubs=[],activeMonth=nowMonth(),currentSplit="equal",receiptCache=null;
 
-function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2300)}
-function authError(err){ const map={"auth/email-already-in-use":"Ese email ya tiene una cuenta.","auth/invalid-credential":"Email o contraseña incorrectos.","auth/weak-password":"La contraseña necesita al menos 6 caracteres.","auth/invalid-email":"Revisa el email."}; $("#authError").textContent=map[err.code]||err.message||"Ocurrió un error."; }
+const isOwner=()=>!!(me&&household&&household.ownerId===me.uid);
+const myMember=()=>members.find(m=>m.authUid===me?.uid)||members.find(m=>m.id===me?.uid)||null;
+const member=id=>members.find(m=>m.id===id)||{id,name:"Miembro"};
+
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400)}
+function authError(err){const map={"auth/email-already-in-use":"Ese email ya tiene una cuenta.","auth/invalid-credential":"Email o contraseña incorrectos.","auth/weak-password":"La contraseña necesita al menos 6 caracteres.","auth/invalid-email":"Revisa el email."};$("#authError").textContent=map[err.code]||err.message||"Ocurrió un error."}
 function showOnly(id){["authView","setupView","appView"].forEach(x=>$("#"+x).classList.toggle("hidden",x!==id))}
 function clearSubs(){unsubs.forEach(f=>f());unsubs=[]}
 
-$("#loginTab").onclick=()=>{$("#loginTab").classList.add("active");$("#registerTab").classList.remove("active");$("#loginForm").classList.remove("hidden");$("#registerForm").classList.add("hidden");$("#authError").textContent=""}
-$("#registerTab").onclick=()=>{$("#registerTab").classList.add("active");$("#loginTab").classList.remove("active");$("#registerForm").classList.remove("hidden");$("#loginForm").classList.add("hidden");$("#authError").textContent=""}
-$("#loginForm").onsubmit=async e=>{e.preventDefault();$("#authError").textContent="";try{await signInWithEmailAndPassword(auth,$("#loginEmail").value.trim(),$("#loginPassword").value)}catch(err){authError(err)}}
-$("#registerForm").onsubmit=async e=>{
-  e.preventDefault();$("#authError").textContent="";
-  const name=$("#registerName").value.trim();
-  const email=$("#registerEmail").value.trim().toLowerCase();
-  const password=$("#registerPassword").value;
-  try{
-    // Nadie puede auto-registrarse: debe existir primero una invitación creada por Alberto.
-    const inviteSnap=await getDoc(doc(db,"invites",emailKey(email)));
-    if(!inviteSnap.exists()){
-      $("#authError").textContent="Este email no fue autorizado por el administrador.";
-      return;
-    }
-    const c=await createUserWithEmailAndPassword(auth,email,password);
-    await updateProfile(c.user,{displayName:name});
-    await setDoc(doc(db,"users",c.user.uid),{name,email:c.user.email,householdId:null,createdAt:serverTimestamp()});
-    me=c.user;
-    await claimMyInvite();
-  }catch(err){authError(err)}
-}
+$("#loginTab").onclick=()=>{$("#loginTab").classList.add("active");$("#registerTab").classList.remove("active");$("#loginForm").classList.remove("hidden");$("#registerForm").classList.add("hidden");$("#authError").textContent=""};
+$("#registerTab").onclick=()=>{$("#registerTab").classList.add("active");$("#loginTab").classList.remove("active");$("#registerForm").classList.remove("hidden");$("#loginForm").classList.add("hidden");$("#authError").textContent=""};
+$("#loginForm").onsubmit=async e=>{e.preventDefault();$("#authError").textContent="";try{await signInWithEmailAndPassword(auth,$("#loginEmail").value.trim(),$("#loginPassword").value)}catch(err){authError(err)}};
+$("#registerForm").onsubmit=async e=>{e.preventDefault();$("#authError").textContent="";const name=$("#registerName").value.trim(),email=$("#registerEmail").value.trim().toLowerCase(),password=$("#registerPassword").value;try{const inv=await getDoc(doc(db,"invites",emailKey(email)));if(!inv.exists()){throw {message:"Este email no fue autorizado por el administrador."}}const c=await createUserWithEmailAndPassword(auth,email,password);await updateProfile(c.user,{displayName:name});await setDoc(doc(db,"users",c.user.uid),{name,email:c.user.email,householdId:null,createdAt:serverTimestamp()});me=c.user;await claimMyInvite()}catch(err){authError(err)}};
+$("#forgotPassword").onclick=async()=>{const email=$("#loginEmail").value.trim();if(!email){$("#authError").textContent="Escribe primero tu email.";return}try{await sendPasswordResetEmail(auth,email);$("#authError").textContent="Te enviamos un enlace de restablecimiento."}catch(err){authError(err)}};
 $("#setupLogout").onclick=()=>signOut(auth);$("#logoutBtn").onclick=()=>signOut(auth);
 
-$("#forgotPassword").onclick=async()=>{
-  const email=$("#loginEmail").value.trim();
-  if(!email){$("#authError").textContent="Escribe primero tu email.";return}
-  try{await sendPasswordResetEmail(auth,email);$("#authError").textContent="Te enviamos un enlace para crear una nueva contraseña."}
-  catch(err){authError(err)}
-};
-
 async function claimMyInvite(){
-  if(!me?.email){toast("Tu cuenta necesita un email.");return false}
-  const ref=doc(db,"invites",emailKey(me.email));
-  const snap=await getDoc(ref);
-  if(!snap.exists()){toast("No encontramos una invitación para "+me.email);return false}
-  const inv=snap.data();
-  if(String(inv.email||"").toLowerCase()!==me.email.toLowerCase()){toast("La invitación no coincide con tu email.");return false}
-
-  const memberRef=doc(db,"households",inv.householdId,"members",inv.memberId);
-  await setDoc(memberRef,{
-    authUid:me.uid,
-    email:me.email,
-    inviteStatus:"active",
-    joinedAt:serverTimestamp()
-  },{merge:true});
-  await setDoc(doc(db,"users",me.uid),{
-    name:me.displayName||me.email.split("@")[0],
-    email:me.email,
-    householdId:inv.householdId,
-    memberId:inv.memberId,
-    joinedAt:serverTimestamp()
-  },{merge:true});
-  await deleteDoc(ref);
-  householdId=inv.householdId;
-  await startApp();
-  toast("¡Ya entraste a Mi Casa! ✓");
-  return true;
+  if(!me?.email)return false;
+  const ref=doc(db,"invites",emailKey(me.email)),snap=await getDoc(ref); if(!snap.exists())return false;
+  const inv=snap.data(); if(String(inv.email||"").toLowerCase()!==me.email.toLowerCase())return false;
+  await setDoc(doc(db,"households",inv.householdId,"members",inv.memberId),{authUid:me.uid,email:me.email,inviteStatus:"active",joinedAt:serverTimestamp()},{merge:true});
+  await setDoc(doc(db,"users",me.uid),{name:me.displayName||me.email.split("@")[0],email:me.email,householdId:inv.householdId,memberId:inv.memberId,joinedAt:serverTimestamp()},{merge:true});
+  await deleteDoc(ref);householdId=inv.householdId;await startApp();toast("¡Bienvenido a Mi Casa! ✓");return true;
 }
-$("#claimInviteBtn").onclick=async()=>{try{await claimMyInvite()}catch(err){console.error("CLAIM_INVITE",err);toast("No se pudo aceptar la invitación.")}};
+$("#claimInviteBtn").onclick=async()=>{try{if(!(await claimMyInvite()))toast("No encontramos una invitación para este email.")}catch(err){console.error(err);toast("No se pudo aceptar la invitación.")}};
 
-onAuthStateChanged(auth, async user=>{
-  clearSubs(); me=user; householdId=null; household=null; members=[]; expenses=[];
-  if(!user){showOnly("authView");return}
-  try{
-    const uref=doc(db,"users",user.uid); let us=await getDoc(uref);
-    if(!us.exists()){await setDoc(uref,{name:user.displayName||user.email.split("@")[0],email:user.email,householdId:null,createdAt:serverTimestamp()});us=await getDoc(uref)}
-    householdId=us.data().householdId||null;
-
-    // An invitation from the Owner takes precedence over any accidental old household.
-    // This fixes users such as Nela who previously created a separate Mi Casa.
-    try{
-      const inviteSnap=await getDoc(doc(db,"invites",emailKey(me.email||"")));
-      if(inviteSnap.exists()){
-        const invitedHousehold=inviteSnap.data().householdId;
-        if(invitedHousehold && invitedHousehold!==householdId){
-          await claimMyInvite();
-          return;
-        }
-      }
-    }catch(invErr){console.warn("AUTO_CLAIM_INVITE",invErr)}
-
-    if(!householdId){showOnly("setupView");return}
-    startApp();
-  }catch(err){console.error(err);toast("No pudimos cargar tu cuenta.");}
-});
-
+onAuthStateChanged(auth,async user=>{clearSubs();me=user;householdId=null;household=null;members=[];expenses=[];settlements=[];recurrings=[];budgets={};closings={};if(!user){showOnly("authView");return}try{const uref=doc(db,"users",user.uid);let us=await getDoc(uref);if(!us.exists()){await setDoc(uref,{name:user.displayName||user.email.split("@")[0],email:user.email,householdId:null,createdAt:serverTimestamp()});us=await getDoc(uref)}householdId=us.data().householdId||null;if(!householdId){if(await claimMyInvite())return;showOnly("setupView");return}await startApp()}catch(err){console.error(err);toast("No pudimos cargar tu cuenta.")}});
 
 async function startApp(){
   showOnly("appView");
-  const h=await getDoc(doc(db,"households",householdId)); if(!h.exists()){toast("No encontramos el hogar.");return}
+  const h=await getDoc(doc(db,"households",householdId));if(!h.exists()){toast("No encontramos el hogar.");return}
   household={id:h.id,...h.data()};
-  $("#sideHouse").textContent=household.name||"Mi Casa";
-  $("#sideName").textContent=me.displayName||me.email;
-  $("#sideAvatar").textContent=initials(me.displayName||me.email);
-  $("#adminNav").classList.toggle("hidden",!isOwner());
-  $$(".owner-only").forEach(x=>x.classList.toggle("hidden",!isOwner()));
-  $(".side-user small").textContent=isOwner()?"Owner":"Member";
-  $("#monthEyebrow").textContent=monthLabel().toUpperCase();
-  $("#statementMonth").textContent=monthLabel().replace(/^./,c=>c.toUpperCase());
-  unsubs.push(onSnapshot(collection(db,"households",householdId,"members"),snap=>{members=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
-  const q=query(collection(db,"households",householdId,"expenses"),orderBy("date","desc"));
-  unsubs.push(onSnapshot(q,snap=>{expenses=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll()},err=>{console.error(err);toast("No pudimos sincronizar los gastos.")}));
+  $("#sideHouse").textContent=household.name||"Mi Casa";$("#sideName").textContent=me.displayName||me.email;$("#sideAvatar").textContent=initials(me.displayName||me.email);
+  $("#adminNav").classList.toggle("hidden",!isOwner());$$(".owner-only").forEach(x=>x.classList.toggle("hidden",!isOwner()));$(".side-user small").textContent=isOwner()?"Owner":"Member";
+  $("#monthEyebrow").textContent=monthLabel(activeMonth).toUpperCase();$("#statementMonth").textContent=cap(monthLabel(activeMonth));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"members"),s=>{members=s.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
+  unsubs.push(onSnapshot(query(collection(db,"households",householdId,"expenses"),orderBy("date","desc")),s=>{expenses=s.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"settlements"),s=>{settlements=s.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"budgets"),s=>{budgets={};s.docs.forEach(d=>budgets[d.id]=d.data());renderAll()}));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"recurring"),s=>{recurrings=s.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"monthlyClosings"),s=>{closings={};s.docs.forEach(d=>closings[d.id]=d.data());renderAll()}));
 }
 
-function monthExpenses(){return expenses.filter(x=>monthKey(x.date)===currentMonth)}
-function calc(){
-  const paid={},share={}; members.forEach(m=>{paid[m.id]=0;share[m.id]=0});
-  for(const e of monthExpenses()){
-    paid[e.payerId]=(paid[e.payerId]||0)+Number(e.amount||0);
-    const ids=e.participantIds||[]; if(!ids.length)continue;
-    const each=Number(e.amount||0)/ids.length; ids.forEach(id=>share[id]=(share[id]||0)+each);
-  }
-  const balances={};members.forEach(m=>balances[m.id]=(paid[m.id]||0)-(share[m.id]||0));
-  return {paid,share,balances};
+const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
+function monthExpenses(key=activeMonth){return expenses.filter(x=>monthKey(x.date)===key)}
+function prevMonthKey(key){const [y,m]=key.split("-").map(Number),d=new Date(Date.UTC(y,m-2,1));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}`}
+function expenseShares(e){
+  if(e.shares&&Object.keys(e.shares).length)return e.shares;
+  const ids=e.participantIds||[];if(!ids.length)return {};
+  const each=Number(e.amount||0)/ids.length;return Object.fromEntries(ids.map(id=>[id,each]));
+}
+function calc(key=activeMonth){
+  const paid={},share={};members.forEach(m=>{paid[m.id]=0;share[m.id]=0});
+  for(const e of monthExpenses(key)){paid[e.payerId]=(paid[e.payerId]||0)+Number(e.amount||0);for(const [id,v] of Object.entries(expenseShares(e)))share[id]=(share[id]||0)+Number(v||0)}
+  const balances={};members.forEach(m=>balances[m.id]=(paid[m.id]||0)-(share[m.id]||0));return{paid,share,balances};
 }
 function settlementPlan(){
-  const {balances}=calc();
-  let debt=Object.entries(balances).filter(([,v])=>v<-.005).map(([id,v])=>({id,a:-v})).sort((a,b)=>b.a-a.a);
-  let cred=Object.entries(balances).filter(([,v])=>v>.005).map(([id,v])=>({id,a:v})).sort((a,b)=>b.a-a.a);
-  const out=[];let i=0,j=0;
-  while(i<debt.length&&j<cred.length){let a=Math.min(debt[i].a,cred[j].a);out.push({from:debt[i].id,to:cred[j].id,amount:a});debt[i].a-=a;cred[j].a-=a;if(debt[i].a<.005)i++;if(cred[j].a<.005)j++}
-  return out;
+  const {balances}=calc(),paidThisMonth=settlements.filter(s=>s.month===activeMonth&&s.status==="paid");
+  const adjusted={...balances};paidThisMonth.forEach(s=>{adjusted[s.from]=(adjusted[s.from]||0)+Number(s.amount);adjusted[s.to]=(adjusted[s.to]||0)-Number(s.amount)});
+  let debt=Object.entries(adjusted).filter(([,v])=>v<-.005).map(([id,v])=>({id,a:-v})).sort((a,b)=>b.a-a.a),cred=Object.entries(adjusted).filter(([,v])=>v>.005).map(([id,v])=>({id,a:v})).sort((a,b)=>b.a-a.a),out=[],i=0,j=0;
+  while(i<debt.length&&j<cred.length){const a=Math.min(debt[i].a,cred[j].a);out.push({from:debt[i].id,to:cred[j].id,amount:a});debt[i].a-=a;cred[j].a-=a;if(debt[i].a<.005)i++;if(cred[j].a<.005)j++}return out;
 }
-const member=id=>members.find(m=>m.id===id)||{name:"Miembro"};
+function totalBudget(){return CATS.reduce((s,c)=>s+Number(budgets[`${activeMonth}_${c}`]?.limit||0),0)}
+function catTotals(){const o={};monthExpenses().forEach(e=>o[e.category]=(o[e.category]||0)+Number(e.amount||0));return o}
 
 function renderAll(){
-  if(!me||!householdId)return;
-  const mex=monthExpenses(),total=mex.reduce((s,e)=>s+Number(e.amount||0),0),{paid,share,balances}=calc();
-  const myBal=balances[me.uid]||0;
-  $("#monthTotal").textContent=money(total);$("#movementCount").textContent=`${mex.length} ${mex.length===1?"movimiento":"movimientos"}`;
-  $("#owedToMe").textContent=money(Math.max(0,myBal));$("#iOwe").textContent=money(Math.max(0,-myBal));
-  $("#statementTotal").textContent=money(total);$("#statementMeta").textContent=`${mex.length} gastos · Mes abierto`;
+  if(!householdId)return;
+  const mex=monthExpenses(),total=mex.reduce((s,e)=>s+Number(e.amount||0),0),{paid,share,balances}=calc(),mine=myMember(),myBal=mine?balances[mine.id]||0:0;
+  $("#monthTotal").textContent=money(total);$("#movementCount").textContent=`${mex.length} ${mex.length===1?"movimiento":"movimientos"}`;$("#owedToMe").textContent=money(Math.max(0,myBal));$("#iOwe").textContent=money(Math.max(0,-myBal));
+  $("#statementTotal").textContent=money(total);
+  const closed=!!closings[activeMonth];$("#statementMeta").textContent=`${mex.length} gastos · ${closed?"Mes cerrado":"Mes abierto"}`;$("#closeMonthBtn").textContent=closed?"Reabrir mes":"Cerrar mes";
 
-  $("#peopleStrip").innerHTML=members.map(m=>`<div class="person-card"><div class="avatar">${esc(initials(m.name))}</div><b>${esc(m.name)}</b><small>Pagó ${money(paid[m.id]||0)}</small><small class="${balances[m.id]>0.005?"balance-positive":balances[m.id]<-.005?"balance-negative":""}">${balances[m.id]>0.005?"Recibe "+money(balances[m.id]):balances[m.id]<-.005?"Debe "+money(-balances[m.id]):"Saldado"}</small></div>`).join("");
+  const prevTotal=monthExpenses(prevMonthKey(activeMonth)).reduce((s,e)=>s+Number(e.amount||0),0);
+  $("#monthTrend").textContent=prevTotal?`${total<=prevTotal?"↓":"↑"} ${Math.abs((total-prevTotal)/prevTotal*100).toFixed(0)}% vs. mes anterior`:"Primer mes con datos";
+  const tb=totalBudget(),pct=tb?Math.min(100,total/tb*100):0;$("#budgetUsed").textContent=tb?`${Math.round(pct)}% · ${money(total)} / ${money(tb)}`:"Sin presupuesto";$("#budgetProgress").style.width=`${pct}%`;
 
-  const plan=settlementPlan();
-  const planHTML=plan.length?plan.slice(0,3).map(p=>settleHTML(p)).join(""):`<div class="empty"><b>Todo saldado ✓</b>No hay pagos pendientes.</div>`;
-  $("#settlementPreview").innerHTML=planHTML;
-  $("#settlementList").innerHTML=plan.length?plan.map(p=>settleHTML(p)).join(""):`<div class="empty"><b>Todo saldado ✓</b>No hay pagos pendientes este mes.</div>`;
+  renderInsights(total,prevTotal,paid,balances);
+  $("#peopleStrip").innerHTML=members.map(m=>`<button class="person-card" data-person="${esc(m.id)}"><div class="avatar">${esc(initials(m.name))}</div><b>${esc(m.name)}</b><small>Pagó ${money(paid[m.id]||0)}</small><small class="${balances[m.id]>0.005?"balance-positive":balances[m.id]<-.005?"balance-negative":""}">${balances[m.id]>0.005?"Recibe "+money(balances[m.id]):balances[m.id]<-.005?"Debe "+money(-balances[m.id]):"Saldado"}</small></button>`).join("");
+  $$(".person-card").forEach(b=>b.onclick=()=>openMemberDetail(b.dataset.person));
 
-  const cats={};mex.forEach(e=>cats[e.category]=(cats[e.category]||0)+Number(e.amount||0));
-  const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
-  $("#categoryList").innerHTML=entries.length?entries.slice(0,5).map(([k,v])=>`<div class="category-row"><b>${esc(k)}</b><span>${money(v)}</span><div class="category-track"><div class="category-fill" style="width:${total?Math.max(5,v/total*100):0}%"></div></div></div>`).join(""):`<div class="empty"><b>Sin categorías</b>Agrega tu primer gasto.</div>`;
+  const plan=settlementPlan();$("#settlementPreview").innerHTML=plan.length?plan.slice(0,3).map(settleHTML).join(""):`<div class="empty"><b>Todo saldado ✓</b>No hay pagos pendientes.</div>`;
+  $("#settlementList").innerHTML=plan.length?plan.map((p,i)=>settleHTML(p,true,i)).join(""):`<div class="empty"><b>Todo saldado ✓</b>No hay pagos pendientes este mes.</div>`;
+  $$(".mark-paid").forEach(b=>b.onclick=()=>markSettlement(Number(b.dataset.index)));
+  const hist=settlements.filter(s=>s.month===activeMonth&&s.status==="paid").sort((a,b)=>(b.paidAt?.seconds||0)-(a.paidAt?.seconds||0));
+  $("#settlementHistory").innerHTML=hist.length?hist.map(s=>`<div class="feed-item"><div class="cat-icon">✓</div><div class="feed-copy"><b>${esc(member(s.from).name)} → ${esc(member(s.to).name)}</b><small>${esc(s.method||"Pago")} · registrado</small></div><div class="feed-amount"><b>${money(s.amount)}</b><small>Pagado</small></div></div>`).join(""):`<div class="empty"><b>Sin pagos registrados</b>Los pagos marcados como pagados aparecerán aquí.</div>`;
 
-  const feed=expenses.length?expenses.map(feedHTML).join(""):`<div class="empty"><b>No hay gastos todavía</b>Toca “Nuevo gasto” para comenzar.</div>`;
-  $("#activityList").innerHTML=feed;$("#recentList").innerHTML=expenses.length?expenses.slice(0,5).map(feedHTML).join(""):`<div class="empty"><b>No hay gastos todavía</b>Toca “Nuevo gasto” para comenzar.</div>`;
-  $$(".feed-item[data-id]").forEach(el=>el.onclick=()=>openExpense(expenses.find(x=>x.id===el.dataset.id)));
-
-  $("#membersList").innerHTML=members.map(m=>{
-    const status=m.authUid?"Activo":m.email?"Invitación pendiente":"Sin acceso";
-    return `<div class="member-row"><div class="avatar">${esc(initials(m.name))}</div><div><b>${esc(m.name)}</b><small>${esc(m.email||"Sin email")} · ${status}</small></div><span class="role-pill">${esc(m.role||"member")}</span></div>`
-  }).join("");
-  if($("#adminUsers")) $("#adminUsers").innerHTML=isOwner()?members.map(m=>{
-    const status=m.authUid?"Activo":m.email?"Pendiente":"Sin acceso";
-    return `<div class="member-row admin-user" data-member="${esc(m.id)}"><div class="avatar">${esc(initials(m.name))}</div><div class="member-main"><b>${esc(m.name)}</b><small>${esc(m.email||"Sin email")} · ${status}</small></div><div class="admin-actions">${m.email?`<button class="secondary mini reset-access" data-email="${esc(m.email)}">Restablecer contraseña</button>`:""}${m.id!==me.uid?`<button class="danger mini remove-member" data-member="${esc(m.id)}">Eliminar</button>`:""}</div></div>`
-  }).join(""):`<div class="empty"><b>Solo el Owner</b>Esta sección está reservada para el administrador.</div>`;
-  $$(".reset-access").forEach(b=>b.onclick=async ev=>{ev.stopPropagation();try{await sendPasswordResetEmail(auth,b.dataset.email);toast("Enlace de contraseña enviado ✓")}catch(err){console.error(err);toast("No se pudo enviar el restablecimiento.")}});
-  $$(".remove-member").forEach(b=>b.onclick=async ev=>{ev.stopPropagation();if(!confirm("¿Quitar este miembro de Mi Casa?"))return;try{await deleteDoc(doc(db,"households",householdId,"members",b.dataset.member));toast("Miembro eliminado")}catch(err){console.error(err);toast("No se pudo eliminar.")}});
-  $("#monthPeople").innerHTML=members.map(m=>`<div class="settle-row"><div class="settle-person"><div class="avatar">${esc(initials(m.name))}</div><div><b>${esc(m.name)}</b><small>Pagó ${money(paid[m.id]||0)}</small></div></div><span></span><div class="settle-person right"><div><b>${balances[m.id]>=0?"Recibe":"Debe"} ${money(Math.abs(balances[m.id]||0))}</b><small>Parte ${money(share[m.id]||0)}</small></div></div></div>`).join("");
+  renderCategories(total);
+  renderActivity();
+  renderMembers(paid,share,balances);
+  renderCalendar();
   fillMemberControls();
 }
-function settleHTML(p){return `<div class="settle-row"><div class="settle-person"><div class="avatar">${esc(initials(member(p.from).name))}</div><div><b>${esc(member(p.from).name)}</b><small>paga</small></div></div><div class="settle-arrow">→<b>${money(p.amount)}</b></div><div class="settle-person right"><div><b>${esc(member(p.to).name)}</b><small>recibe</small></div><div class="avatar">${esc(initials(member(p.to).name))}</div></div></div>`}
-function feedHTML(e){const icons={Casa:"⌂",Comida:"●",Servicios:"⚡",Teléfono:"◫",Transporte:"◆",Salud:"✚",Otros:"•"};return `<div class="feed-item" data-id="${esc(e.id)}"><div class="cat-icon">${icons[e.category]||"•"}</div><div class="feed-copy"><b>${esc(e.description)}</b><small>${esc(member(e.payerId).name)} pagó · ${(e.participantIds||[]).length} participantes · ${esc(e.date)}</small></div><div class="feed-amount"><b>${money(e.amount)}</b><small>${esc(e.category||"Otros")}</small></div></div>`}
+
+function renderInsights(total,prevTotal,paid,balances){
+  const cats=catTotals(),top=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0],bigPayer=Object.entries(paid).sort((a,b)=>b[1]-a[1])[0],open=settlementPlan().length;
+  const items=[
+    top?`<div class="insight"><span>◔</span><div><b>${esc(top[0])} es la categoría principal</b><small>${money(top[1])} este mes</small></div></div>`:`<div class="insight"><span>◔</span><div><b>Aún no hay gastos</b><small>Tu primer insight aparecerá aquí.</small></div></div>`,
+    prevTotal?`<div class="insight"><span>${total<=prevTotal?"↓":"↑"}</span><div><b>${total<=prevTotal?"Gastaron menos":"Gastaron más"} que el mes anterior</b><small>${money(Math.abs(total-prevTotal))} de diferencia</small></div></div>`:`<div class="insight"><span>◎</span><div><b>Construyendo historial</b><small>El próximo mes tendremos comparación.</small></div></div>`,
+    bigPayer?`<div class="insight"><span>★</span><div><b>${esc(member(bigPayer[0]).name)} adelantó más dinero</b><small>${money(bigPayer[1])} pagados</small></div></div>`:"",
+    `<div class="insight"><span>⇄</span><div><b>${open?open+" pagos pendientes":"Todo está saldado"}</b><small>${open?"Puedes registrarlos en Saldos.":"No hay transferencias por hacer."}</small></div></div>`
+  ].filter(Boolean);$("#insightsGrid").innerHTML=items.join("");
+}
+function renderCategories(total){
+  const cats=catTotals(),entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+  $("#categoryList").innerHTML=entries.length?entries.slice(0,6).map(([k,v])=>{const lim=Number(budgets[`${activeMonth}_${k}`]?.limit||0),p=lim?Math.min(100,v/lim*100):total?Math.max(5,v/total*100):0;return `<div class="category-row"><div class="cat-line"><b>${esc(k)}</b><span>${money(v)}${lim?` / ${money(lim)}`:""}</span></div><div class="category-track"><div class="category-fill ${lim&&v>lim?"over":""}" style="width:${p}%"></div></div></div>`}).join(""):`<div class="empty"><b>Sin categorías</b>Agrega tu primer gasto.</div>`;
+}
+function renderActivity(){
+  const q=($("#activitySearch")?.value||"").toLowerCase(),cat=$("#activityCategory")?.value||"";
+  const filtered=expenses.filter(e=>(!q||String(e.description).toLowerCase().includes(q))&&(!cat||e.category===cat));
+  const empty=`<div class="empty"><b>No hay movimientos</b>No encontramos gastos con esos filtros.</div>`;
+  $("#activityList").innerHTML=filtered.length?filtered.map(feedHTML).join(""):empty;$("#recentList").innerHTML=expenses.length?expenses.slice(0,5).map(feedHTML).join(""):`<div class="empty"><b>No hay gastos todavía</b>Toca “Nuevo gasto” para comenzar.</div>`;
+  $$(".feed-item[data-id]").forEach(el=>el.onclick=()=>openExpense(expenses.find(x=>x.id===el.dataset.id)));
+}
+$("#activitySearch").addEventListener("input",renderActivity);$("#activityCategory").addEventListener("change",renderActivity);
+
+function renderMembers(paid,share,balances){
+  $("#membersList").innerHTML=members.map(m=>`<button class="member-row clickable-member" data-person="${esc(m.id)}"><div class="avatar">${esc(initials(m.name))}</div><div><b>${esc(m.name)}</b><small>${esc(m.email||"Sin email")} · ${m.authUid?"Activo":m.email?"Pendiente":"Sin acceso"}</small></div><span class="role-pill">${esc(m.role||"member")}</span></button>`).join("");
+  $$(".clickable-member").forEach(b=>b.onclick=()=>openMemberDetail(b.dataset.person));
+  $("#adminUsers").innerHTML=isOwner()?members.map(m=>`<div class="member-row admin-user"><div class="avatar">${esc(initials(m.name))}</div><div class="member-main"><b>${esc(m.name)}</b><small>${esc(m.email||"Sin email")} · ${m.authUid?"Activo":m.email?"Pendiente":"Sin acceso"}</small></div><div class="admin-actions">${m.email?`<button class="secondary mini reset-access" data-email="${esc(m.email)}">Restablecer contraseña</button>`:""}${m.authUid!==me.uid?`<button class="danger mini remove-member" data-member="${esc(m.id)}">Eliminar</button>`:""}</div></div>`).join(""):`<div class="empty"><b>Solo el Owner</b>Esta sección está reservada para el administrador.</div>`;
+  $$(".reset-access").forEach(b=>b.onclick=async()=>{try{await sendPasswordResetEmail(auth,b.dataset.email);toast("Enlace enviado ✓")}catch(e){toast("No se pudo enviar.")}});
+  $$(".remove-member").forEach(b=>b.onclick=async()=>{if(!confirm("¿Quitar este miembro del hogar?"))return;try{await deleteDoc(doc(db,"households",householdId,"members",b.dataset.member));toast("Miembro eliminado")}catch(e){toast("No se pudo eliminar.")}});
+  $("#monthPeople").innerHTML=members.map(m=>`<div class="settle-row"><div class="settle-person"><div class="avatar">${esc(initials(m.name))}</div><div><b>${esc(m.name)}</b><small>Pagó ${money(paid[m.id]||0)}</small></div></div><span></span><div class="settle-person right"><div><b>${balances[m.id]>=0?"Recibe":"Debe"} ${money(Math.abs(balances[m.id]||0))}</b><small>Parte ${money(share[m.id]||0)}</small></div></div></div>`).join("");
+}
+function openMemberDetail(id){
+  const m=member(id),{paid,share,balances}=calc(),mine=monthExpenses().filter(e=>e.payerId===id||(e.participantIds||[]).includes(id)).slice(0,5);
+  $("#memberDetailContent").innerHTML=`<div class="profile-hero"><div class="avatar xl">${esc(initials(m.name))}</div><div><h2>${esc(m.name)}</h2><p>${esc(m.email||"Miembro de la casa")}</p></div></div><div class="profile-stats"><div><small>Pagó</small><b>${money(paid[id]||0)}</b></div><div><small>Le corresponde</small><b>${money(share[id]||0)}</b></div><div><small>Balance</small><b>${balances[id]>=0?"+":""}${money(balances[id]||0)}</b></div></div><h3>Movimientos recientes</h3><div class="feed">${mine.length?mine.map(feedHTML).join(""):`<div class="empty">Sin movimientos este mes.</div>`}</div>`;
+  openSheet("#memberDetailSheet");
+}
+function settleHTML(p,withButton=false,i=0){return `<div class="settle-row"><div class="settle-person"><div class="avatar">${esc(initials(member(p.from).name))}</div><div><b>${esc(member(p.from).name)}</b><small>paga</small></div></div><div class="settle-arrow">→<b>${money(p.amount)}</b>${withButton?`<button class="secondary mini mark-paid" data-index="${i}">Marcar pagado</button>`:""}</div><div class="settle-person right"><div><b>${esc(member(p.to).name)}</b><small>recibe</small></div><div class="avatar">${esc(initials(member(p.to).name))}</div></div></div>`}
+async function markSettlement(i){const p=settlementPlan()[i];if(!p)return;try{await addDoc(collection(db,"households",householdId,"settlements"),{...p,month:activeMonth,status:"paid",method:"Transferencia",createdBy:me.uid,paidAt:serverTimestamp()});toast("Pago registrado ✓")}catch(e){console.error(e);toast("No se pudo registrar el pago.")}}
+function feedHTML(e){const icons={Casa:"⌂",Comida:"●",Servicios:"⚡",Teléfono:"◫",Transporte:"◆",Salud:"✚",Suscripciones:"↻",Otros:"•"};return `<div class="feed-item" data-id="${esc(e.id)}"><div class="cat-icon">${icons[e.category]||"•"}</div><div class="feed-copy"><b>${esc(e.description)}</b><small>${esc(member(e.payerId).name)} pagó · ${(e.participantIds||[]).length} participantes · ${esc(e.date)}</small></div><div class="feed-amount"><b>${money(e.amount)}</b><small>${esc(e.category||"Otros")}${e.receiptName?" · 📎":""}</small></div></div>`}
 
 function fillMemberControls(){
-  $("#expensePayer").innerHTML=members.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join("");
+  const opts=members.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join("");$("#expensePayer").innerHTML=opts;$("#recurringPayer").innerHTML=opts;
   $("#participantPicker").innerHTML=members.map(m=>`<button type="button" class="participant selected" data-id="${esc(m.id)}"><span class="avatar">${esc(initials(m.name))}</span>${esc(m.name)}</button>`).join("");
-  $$("#participantPicker .participant").forEach(b=>b.onclick=()=>{b.classList.toggle("selected");updatePerPerson()});
+  $$("#participantPicker .participant").forEach(b=>b.onclick=()=>{b.classList.toggle("selected");renderCustomSplitRows();updatePerPerson()});
 }
-function updatePerPerson(){const n=$$("#participantPicker .participant.selected").length,a=parseFloat($("#expenseAmount").value)||0;$("#perPerson").textContent=n?`${money(a/n)} c/u`:"Selecciona personas"}
+function selectedIds(){return $$("#participantPicker .participant.selected").map(x=>x.dataset.id)}
+function renderCustomSplitRows(existing={}){
+  if(currentSplit==="equal"){$("#customSplitRows").classList.add("hidden");return}
+  $("#customSplitRows").classList.remove("hidden");$("#customSplitRows").innerHTML=selectedIds().map(id=>`<label class="split-person"><span>${esc(member(id).name)}</span><input class="split-input" data-id="${esc(id)}" inputmode="decimal" placeholder="${currentSplit==="percent"?"%":"$"}" value="${existing[id]??""}"></label>`).join("");$$(".split-input").forEach(i=>i.addEventListener("input",updatePerPerson));
+}
+function updatePerPerson(){
+  const n=selectedIds().length,a=parseFloat($("#expenseAmount").value)||0;
+  if(currentSplit==="equal")$("#perPerson").textContent=n?`${money(a/n)} c/u`:"Selecciona personas";
+  else{const vals=$$(".split-input").reduce((s,i)=>s+(parseFloat(i.value)||0),0);$("#perPerson").textContent=currentSplit==="percent"?`${vals.toFixed(1)}% asignado`:`${money(vals)} asignado`}
+}
 $("#expenseAmount").addEventListener("input",updatePerPerson);
+$$(".split-tab").forEach(b=>b.onclick=()=>{currentSplit=b.dataset.split;$$(".split-tab").forEach(x=>x.classList.toggle("active",x===b));$("#splitHelp").textContent=currentSplit==="equal"?"Se divide por igual.":currentSplit==="amount"?"Define el monto exacto por persona.":"Define el porcentaje por persona.";renderCustomSplitRows();updatePerPerson()});
 
 function openSheet(id){$("#overlay").classList.remove("hidden");$(id).classList.remove("hidden")}
 function closeSheets(){$("#overlay").classList.add("hidden");$$(".sheet").forEach(x=>x.classList.add("hidden"))}
-$("#overlay").onclick=closeSheets;$$(".sheetCancel").forEach(b=>b.onclick=closeSheets);$$(".memberCancel").forEach(b=>b.onclick=closeSheets);
+$("#overlay").onclick=closeSheets;$$(".sheetCancel,.memberCancel,.budgetCancel,.recurringCancel,.detailCancel").forEach(b=>b.onclick=closeSheets);
 
 function openExpense(e=null){
   if(!members.length){toast("Primero agrega miembros.");return}
-  $("#expenseForm").reset();$("#expenseId").value=e?.id||"";$("#expenseSheetTitle").textContent=e?"Editar gasto":"Nuevo gasto";$("#deleteExpense").classList.toggle("hidden",!e);
-  $("#expenseDate").value=e?.date||today();$("#expenseAmount").value=e?.amount||"";$("#expenseDescription").value=e?.description||"";$("#expenseCategory").value=e?.category||"Casa";$("#expensePayer").value=e?.payerId||me.uid;$("#expenseNotes").value=e?.notes||"";
+  $("#expenseForm").reset();receiptCache=e?.receiptData||null;$("#expenseId").value=e?.id||"";$("#expenseSheetTitle").textContent=e?"Editar gasto":"Nuevo gasto";$("#deleteExpense").classList.toggle("hidden",!e);
+  $("#expenseDate").value=e?.date||today();$("#expenseAmount").value=e?.amount||"";$("#expenseDescription").value=e?.description||"";$("#expenseCategory").value=e?.category||"Casa";$("#expensePayer").value=e?.payerId||myMember()?.id||members[0]?.id;$("#expenseNotes").value=e?.notes||"";
+  currentSplit=e?.splitMode||"equal";$$(".split-tab").forEach(x=>x.classList.toggle("active",x.dataset.split===currentSplit));
   $$("#participantPicker .participant").forEach(b=>b.classList.toggle("selected",e?(e.participantIds||[]).includes(b.dataset.id):true));
-  updatePerPerson();openSheet("#expenseSheet");setTimeout(()=>$("#expenseAmount").focus(),150)
+  renderCustomSplitRows(e?.splitValues||{});updatePerPerson();
+  $("#receiptPreview").innerHTML=e?.receiptName?`<span>📎</span><div><b>${esc(e.receiptName)}</b><small>${esc(e.receiptType||"archivo")}</small></div>`:`<span>▧</span><div><b>Sin comprobante</b><small>Archivos pequeños pueden guardarse con el gasto.</small></div>`;
+  openSheet("#expenseSheet");setTimeout(()=>$("#expenseAmount").focus(),100)
 }
 ["#newExpenseBtn","#quickExpense","#activityAdd","#mobileAdd"].forEach(id=>$(id).onclick=()=>openExpense());
 $("#saveExpenseTop").onclick=()=>$("#expenseForm").requestSubmit();
+
+$("#expenseReceipt").addEventListener("change",async e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>350000){toast("Para esta versión, el archivo debe pesar menos de 350 KB.");e.target.value="";return}receiptCache=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)});$("#receiptPreview").innerHTML=`<span>📎</span><div><b>${esc(f.name)}</b><small>${Math.round(f.size/1024)} KB · se guardará con el gasto</small></div>`});
+
 $("#expenseForm").onsubmit=async e=>{
-  e.preventDefault();const amount=parseFloat($("#expenseAmount").value),ids=$$("#participantPicker .participant.selected").map(x=>x.dataset.id);
-  if(!(amount>0)){toast("Ingresa un monto válido.");return}if(!ids.length){toast("Selecciona al menos una persona.");return}
-  const data={amount,description:$("#expenseDescription").value.trim(),date:$("#expenseDate").value,category:$("#expenseCategory").value,payerId:$("#expensePayer").value,participantIds:ids,notes:$("#expenseNotes").value.trim(),updatedAt:serverTimestamp()};
+  e.preventDefault();const amount=parseFloat($("#expenseAmount").value),ids=selectedIds();if(!(amount>0)){toast("Ingresa un monto válido.");return}if(!ids.length){toast("Selecciona al menos una persona.");return}
+  let shares={},splitValues={}; if(currentSplit==="equal"){ids.forEach(id=>shares[id]=amount/ids.length)}else{const vals={};$$(".split-input").forEach(i=>vals[i.dataset.id]=parseFloat(i.value)||0);splitValues=vals;if(currentSplit==="amount"){const sum=Object.values(vals).reduce((a,b)=>a+b,0);if(Math.abs(sum-amount)>.01){toast(`La división debe sumar ${money(amount)}.`);return}shares=vals}else{const sum=Object.values(vals).reduce((a,b)=>a+b,0);if(Math.abs(sum-100)>.05){toast("Los porcentajes deben sumar 100%.");return}ids.forEach(id=>shares[id]=amount*(vals[id]||0)/100)}}
+  const f=$("#expenseReceipt").files?.[0];
+  const data={amount,description:$("#expenseDescription").value.trim(),date:$("#expenseDate").value,category:$("#expenseCategory").value,payerId:$("#expensePayer").value,participantIds:ids,splitMode:currentSplit,splitValues,shares,notes:$("#expenseNotes").value.trim(),receiptData:receiptCache||null,receiptName:f?.name||expenses.find(x=>x.id===$("#expenseId").value)?.receiptName||null,receiptType:f?.type||expenses.find(x=>x.id===$("#expenseId").value)?.receiptType||null,updatedAt:serverTimestamp()};
   try{const id=$("#expenseId").value;if(id)await setDoc(doc(db,"households",householdId,"expenses",id),data,{merge:true});else await addDoc(collection(db,"households",householdId,"expenses"),{...data,createdBy:me.uid,createdAt:serverTimestamp()});closeSheets();toast(id?"Gasto actualizado ✓":"Gasto agregado ✓")}catch(err){console.error(err);toast("No se pudo guardar el gasto.")}
-}
-$("#deleteExpense").onclick=async()=>{const id=$("#expenseId").value;if(!id||!confirm("¿Eliminar este gasto?"))return;try{await deleteDoc(doc(db,"households",householdId,"expenses",id));closeSheets();toast("Gasto eliminado")}catch(err){console.error(err);toast("No tienes permiso para eliminarlo.")}}
+};
+$("#deleteExpense").onclick=async()=>{const id=$("#expenseId").value;if(!id||!confirm("¿Eliminar este gasto?"))return;try{await deleteDoc(doc(db,"households",householdId,"expenses",id));closeSheets();toast("Gasto eliminado")}catch(e){toast("No tienes permiso para eliminarlo.")}};
 
 $("#inviteBtn").onclick=()=>{$("#memberForm").reset();openSheet("#memberSheet")};
-$("#memberForm").onsubmit=async e=>{
-  e.preventDefault();
-  if(!isOwner()){toast("Solo el Owner puede administrar miembros.");return}
-  const name=$("#memberName").value.trim();
-  const email=$("#memberEmail").value.trim().toLowerCase();
-  try{
-    const mref=doc(collection(db,"households",householdId,"members"));
-    await setDoc(mref,{name,email:email||null,role:"member",authUid:null,inviteStatus:email?"pending":"none",createdAt:serverTimestamp()});
-    if(email){
-      await setDoc(doc(db,"invites",emailKey(email)),{
-        email,
-        householdId,
-        memberId:mref.id,
-        householdName:household?.name||"Mi Casa",
-        invitedBy:me.uid,
-        createdAt:serverTimestamp()
-      });
-    }
-    closeSheets();
-    toast(email?"Invitación preparada ✓":"Miembro agregado ✓");
-  }catch(err){console.error(err);toast("No se pudo agregar/invitar.")}
+$("#memberForm").onsubmit=async e=>{e.preventDefault();if(!isOwner())return;const name=$("#memberName").value.trim(),email=$("#memberEmail").value.trim().toLowerCase();try{const mref=doc(collection(db,"households",householdId,"members"));await setDoc(mref,{name,email:email||null,role:"member",authUid:null,inviteStatus:email?"pending":"none",createdAt:serverTimestamp()});if(email)await setDoc(doc(db,"invites",emailKey(email)),{email,householdId,memberId:mref.id,householdName:household.name||"Mi Casa",invitedBy:me.uid,createdAt:serverTimestamp()});closeSheets();toast(email?"Invitación preparada ✓":"Miembro agregado ✓")}catch(e){console.error(e);toast("No se pudo agregar.")}};
+
+function openBudgets(){if(!isOwner()){toast("Solo el Owner puede cambiar presupuestos.");return}$("#budgetRows").innerHTML=CATS.map(c=>`<label><span>${esc(c)}</span><input class="budget-input" data-cat="${esc(c)}" inputmode="decimal" placeholder="Sin límite" value="${budgets[`${activeMonth}_${c}`]?.limit||""}"></label>`).join("");openSheet("#budgetSheet")}
+$("#quickBudget").onclick=openBudgets;$("#editBudgetsBtn").onclick=openBudgets;$("#saveBudgetsTop").onclick=()=>$("#budgetForm").requestSubmit();
+$("#budgetForm").onsubmit=async e=>{e.preventDefault();try{await Promise.all($$(".budget-input").map(i=>setDoc(doc(db,"households",householdId,"budgets",`${activeMonth}_${i.dataset.cat}`),{month:activeMonth,category:i.dataset.cat,limit:Number(i.value||0),updatedAt:serverTimestamp()},{merge:true})));closeSheets();toast("Presupuestos guardados ✓")}catch(e){console.error(e);toast("No se pudieron guardar.")}};
+
+$("#addRecurringBtn").onclick=()=>{$("#recurringForm").reset();$("#recurringDay").value=1;fillMemberControls();openSheet("#recurringSheet")};
+$("#recurringForm").onsubmit=async e=>{e.preventDefault();try{await addDoc(collection(db,"households",householdId,"recurring"),{name:$("#recurringName").value.trim(),amount:Number($("#recurringAmount").value),day:Number($("#recurringDay").value),category:$("#recurringCategory").value,payerId:$("#recurringPayer").value,active:true,createdAt:serverTimestamp()});closeSheets();toast("Pago recurrente guardado ✓")}catch(e){console.error(e);toast("No se pudo guardar.")}};
+
+function renderCalendar(){
+  const [y,m]=activeMonth.split("-").map(Number),days=new Date(y,m,0).getDate(),first=new Date(y,m-1,1).getDay();
+  let html=`<div class="cal-head">${["D","L","M","M","J","V","S"].map(x=>`<b>${x}</b>`).join("")}</div><div class="cal-grid">${"<span></span>".repeat(first)}`;
+  for(let d=1;d<=days;d++){const ex=monthExpenses().filter(e=>Number(e.date.slice(8,10))===d),rec=recurrings.filter(r=>r.active&&Number(r.day)===d);html+=`<div class="cal-day"><b>${d}</b>${ex.slice(0,2).map(e=>`<i title="${esc(e.description)}">${money(e.amount)}</i>`).join("")}${rec.slice(0,2).map(r=>`<em title="${esc(r.name)}">${esc(r.name)}</em>`).join("")}</div>`}html+=`</div>`;$("#financialCalendar").innerHTML=html;
+  $("#recurringList").innerHTML=recurrings.length?recurrings.sort((a,b)=>a.day-b.day).map(r=>`<div class="recurring-row"><div class="cat-icon">↻</div><div><b>${esc(r.name)}</b><small>Día ${r.day} · ${esc(r.category)}</small></div><strong>${money(r.amount)}</strong>${isOwner()?`<button class="text-btn delete-recurring" data-id="${esc(r.id)}">×</button>`:""}</div>`).join(""):`<div class="empty"><b>Sin recurrentes</b>Agrega servicios, hipoteca, suscripciones o teléfono.</div>`;
+  $$(".delete-recurring").forEach(b=>b.onclick=async()=>{if(confirm("¿Eliminar este recurrente?"))await deleteDoc(doc(db,"households",householdId,"recurring",b.dataset.id))});
 }
 
-function go(view){
-  $$(".page").forEach(p=>p.classList.remove("active"));$("#"+view+"Page").classList.add("active");
-  $$("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
-  const titles={home:`Buenos días, ${(me?.displayName||"").split(" ")[0]} 👋`,activity:"Actividad",balances:"Saldos",month:"Estado del mes",members:"Miembros",admin:"Administración"};
-  $("#pageTitle").textContent=titles[view]||"Mi Casa";window.scrollTo({top:0,behavior:"smooth"});
-}
-$$("[data-view]").forEach(b=>b.onclick=()=>go(b.dataset.view));$$("[data-jump]").forEach(b=>b.onclick=()=>go(b.dataset.jump));
-$("#profileBtn").onclick=()=>go("members");
+$("#closeMonthBtn").onclick=async()=>{if(!isOwner())return;const existing=closings[activeMonth];try{if(existing){if(!confirm("¿Reabrir este mes? Quedará registrado."))return;await setDoc(doc(db,"households",householdId,"monthlyClosings",activeMonth),{status:"open",reopenedBy:me.uid,reopenedAt:serverTimestamp()},{merge:true});toast("Mes reabierto")}else{if(settlementPlan().length&&!confirm("Aún hay saldos pendientes. ¿Cerrar de todas formas?"))return;await setDoc(doc(db,"households",householdId,"monthlyClosings",activeMonth),{status:"closed",closedBy:me.uid,closedAt:serverTimestamp(),total:monthExpenses().reduce((s,e)=>s+Number(e.amount||0),0)},{merge:true});toast("Mes cerrado ✓")}}catch(e){console.error(e);toast("No se pudo actualizar el cierre.")}};
+
 $("#printReport").onclick=()=>window.print();
 
-if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(console.warn));
+function go(view){$$(".page").forEach(p=>p.classList.remove("active"));$("#"+view+"Page").classList.add("active");$$("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));const titles={home:`Buenos días, ${(me?.displayName||"").split(" ")[0]||"familia"} 👋`,activity:"Actividad",balances:"Saldos",month:"Estado del mes",members:"Miembros",admin:"Administración"};$("#pageTitle").textContent=titles[view]||"Mi Casa";window.scrollTo({top:0,behavior:"smooth"})}
+$$("[data-view]").forEach(b=>b.onclick=()=>go(b.dataset.view));$$("[data-jump]").forEach(b=>b.onclick=()=>go(b.dataset.jump));$("#profileBtn").onclick=()=>{const mm=myMember();if(mm)openMemberDetail(mm.id);else go("members")};
+go("home");
+
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(console.warn));

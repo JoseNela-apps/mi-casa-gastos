@@ -1,29 +1,35 @@
-# Mi Casa · Gastos — V4.1 OWNER ONLY
+# Mi Casa Finance — V5
 
-Esta versión cambia el modelo de acceso:
-
-- Solo existe el hogar principal de Alberto.
-- La aplicación web ya NO permite crear hogares nuevos.
-- Los demás usuarios solamente pueden activar acceso si Alberto los agregó/invitó primero.
-- Si un usuario sin invitación intenta registrarse, la app lo bloquea.
-- Si Nela ya tenía un hogar accidental y Alberto la invita con el mismo email, la invitación tiene prioridad y su perfil se vincula al hogar de Alberto.
-- Alberto sigue siendo Owner y puede borrar gastos/miembros dentro de su hogar.
-- Firebase nunca muestra contraseñas; Alberto puede enviar restablecimientos.
+## Qué trae V5
+- Dashboard financiero con comparación mensual, presupuesto usado e insights.
+- Perfiles financieros por miembro.
+- Nuevo gasto premium con división Igual / Monto / Porcentaje.
+- Comprobantes pequeños guardados dentro del gasto (máximo recomendado: 350 KB).
+- Presupuestos mensuales por categoría.
+- Deudas simplificadas + botón “Marcar pagado” + historial.
+- Calendario financiero mensual.
+- Pagos recurrentes.
+- Cierre y reapertura mensual para Owner.
+- Reporte imprimible/PDF desde la pestaña Mes.
+- Filtros de actividad.
+- Mejoras visuales desktop + mobile/PWA.
+- Mantiene Owner/Admin, invitaciones y acceso por miembros.
 
 ## Instalación
-1. Firebase Console → Firestore Database → Reglas.
-2. Reemplaza TODO por `FIREBASE_RULES.txt` y pulsa Publicar.
-3. Reemplaza los archivos del repositorio GitHub por los de este ZIP.
-4. Commit a main y espera GitHub Pages.
-5. Recarga la app.
+1. Firebase Console → Firestore → Reglas.
+2. Reemplaza TODO con `FIREBASE_RULES.txt` y pulsa Publicar.
+3. Sube/reemplaza en GitHub todos los archivos del ZIP.
+4. Commit a `main`.
+5. Espera el deployment de GitHub Pages.
+6. Haz una recarga completa del navegador.
 
-## Nela
-En la sesión de Alberto:
-1. Si ya existe una ficha vieja de Nela sin el email correcto, elimínala o crea/actualiza la invitación usando `nela.berling@gmail.com`.
-2. Nela inicia sesión con SU cuenta existente.
-3. La app detecta la invitación y cambia su perfil al hogar de Alberto.
+## Importante sobre comprobantes
+Firebase Storage sigue sin estar habilitado en el plan Spark del proyecto. Para no bloquear V5, esta versión permite guardar comprobantes pequeños dentro del documento Firestore como Data URL. Se limita a 350 KB para reducir riesgo de superar el límite de tamaño de Firestore. Para fotos/PDF grandes y almacenamiento real compartido, el siguiente paso correcto es habilitar Firebase Storage (Blaze) o usar otro almacenamiento.
 
-## Sobre borrar la cuenta/hogar accidental de Nela
-V4.1 impide que vuelva a crearse otro hogar, pero NO intenta borrar automáticamente desde el navegador un hogar antiguo que pueda contener datos. El Owner no debe recibir permisos globales de borrado desde JavaScript público.
+## Permisos
+- Owner: miembros, admin, presupuestos, recurrentes, cierre/reapertura de mes.
+- Members: gastos, balances, pagos y consulta.
+- Nadie puede crear un segundo hogar desde la app.
 
-Después de que Nela quede vinculada a Alberto, el hogar antiguo puede eliminarse manualmente una sola vez en Firestore. Para un botón de Super Admin que elimine cuentas de Firebase Authentication y hogares globalmente se necesita Firebase Admin SDK/Cloud Functions (backend).
+## Nota
+Los gastos existentes siguen siendo compatibles. Si no tienen `shares`, V5 calcula división igual usando `participantIds`.
