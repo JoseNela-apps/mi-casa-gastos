@@ -63,12 +63,27 @@ async function startApp(){
   $("#sideHouse").textContent=household.name||"Mi Casa";$("#sideName").textContent=me.displayName||me.email;$("#sideAvatar").textContent=initials(me.displayName||me.email);
   $("#adminNav").classList.toggle("hidden",!isOwner());$("#membersNav")?.classList.toggle("hidden",!isOwner());$$(".owner-only").forEach(x=>x.classList.toggle("hidden",!isOwner()));$(".side-user small").textContent=isOwner()?"Owner":"Member";
   $("#monthEyebrow").textContent=monthLabel(activeMonth).toUpperCase();$("#statementMonth").textContent=cap(monthLabel(activeMonth));
-  unsubs.push(onSnapshot(collection(db,"households",householdId,"members"),s=>{members=s.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
-  unsubs.push(onSnapshot(query(collection(db,"households",householdId,"expenses"),orderBy("date","desc")),s=>{expenses=s.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
-  unsubs.push(onSnapshot(collection(db,"households",householdId,"settlements"),s=>{settlements=s.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
-  unsubs.push(onSnapshot(collection(db,"households",householdId,"budgets"),s=>{budgets={};s.docs.forEach(d=>budgets[d.id]=d.data());renderAll()}));
-  unsubs.push(onSnapshot(collection(db,"households",householdId,"recurring"),s=>{recurrings=s.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
-  unsubs.push(onSnapshot(collection(db,"households",householdId,"monthlyClosings"),s=>{closings={};s.docs.forEach(d=>closings[d.id]=d.data());renderAll()}));
+  beginInitialLoad();
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"members"),s=>{members=s.docs.map(d=>({id:d.id,...d.data()}));dataReady.members=true;scheduleRender()}));
+  unsubs.push(onSnapshot(query(collection(db,"households",householdId,"expenses"),orderBy("date","desc")),s=>{expenses=s.docs.map(d=>({id:d.id,...d.data()}));dataReady.expenses=true;scheduleRender()}));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"settlements"),s=>{settlements=s.docs.map(d=>({id:d.id,...d.data()}));dataReady.settlements=true;scheduleRender()}));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"budgets"),s=>{budgets={};s.docs.forEach(d=>budgets[d.id]=d.data());dataReady.budgets=true;scheduleRender()}));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"recurring"),s=>{recurrings=s.docs.map(d=>({id:d.id,...d.data()}));dataReady.recurring=true;scheduleRender()}));
+  unsubs.push(onSnapshot(collection(db,"households",householdId,"monthlyClosings"),s=>{closings={};s.docs.forEach(d=>closings[d.id]=d.data());dataReady.closings=true;scheduleRender()}));
+}
+
+
+let renderTimer=null;
+let dataReady={members:false,expenses:false,settlements:false,budgets:false,recurring:false,closings:false};
+function beginInitialLoad(){
+  dataReady={members:false,expenses:false,settlements:false,budgets:false,recurring:false,closings:false};
+  document.body.classList.add("app-loading");
+}
+function allDataReady(){return Object.values(dataReady).every(Boolean)}
+function scheduleRender(){
+  if(!allDataReady())return;
+  clearTimeout(renderTimer);
+  renderTimer=setTimeout(()=>{renderTimer=null;document.body.classList.remove("app-loading");renderAll()},70);
 }
 
 const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
@@ -100,13 +115,13 @@ function renderAll(){
   const familyStack=$("#familyAvatarStack");if(familyStack)familyStack.innerHTML=members.slice(0,6).map(m=>`<button class="hero-member-avatar" data-person="${esc(m.id)}" title="${esc(m.name)}">${memberAvatar(m,"hero-avatar")}</button>`).join("");
   $("#familyCount")&&($("#familyCount").textContent=`${members.length} personas en Mi Casa`);
   const mobileAvatar=$("#mobileProfileAvatar"),mmNow=myMember();if(mobileAvatar&&mmNow)mobileAvatar.innerHTML=memberAvatar(mmNow,"nav-avatar");
+  const prevTotal=monthExpenses(prevMonthKey(activeMonth)).reduce((s,e)=>s+Number(e.amount||0),0);
   renderPremiumCharts(total,prevTotal);
   const status=$("#familyStatusMessage");if(status)status.textContent=total?`${members.length} personas · ${mex.length} movimientos registrados este mes.`:`${members.length} personas listas para organizar los gastos de la casa.`;
   const pulse=$("#familyPulse");if(pulse){const planNow=settlementPlan(),tbNow=totalBudget(),remain=tbNow-total;pulse.innerHTML=`<div class="pulse-row"><span>◎</span><div><b>${planNow.length?planNow.length+" pagos por resolver":"Todo saldado"}</b><small>${planNow.length?"Revisa Saldos para mantener la casa al día.":"No hay transferencias pendientes."}</small></div></div><div class="pulse-row"><span>⌂</span><div><b>${tbNow?(remain>=0?money(remain)+" disponibles":money(Math.abs(remain))+" sobre presupuesto"):"Presupuesto sin configurar"}</b><small>${tbNow?"Según los límites definidos para este mes.":"Puedes definir límites por categoría."}</small></div></div><div class="pulse-row"><span>▧</span><div><b>${expenses.filter(e=>((e.attachments&&e.attachments.length)||e.receiptData)).length} gastos con comprobante</b><small>Las fotos y PDFs pueden abrirse desde cada gasto.</small></div></div>`}
   $("#statementTotal").textContent=money(total);
   const closed=!!closings[activeMonth];$("#statementMeta").textContent=`${mex.length} gastos · ${closed?"Mes cerrado":"Mes abierto"}`;$("#closeMonthBtn").textContent=closed?"Reabrir mes":"Cerrar mes";
 
-  const prevTotal=monthExpenses(prevMonthKey(activeMonth)).reduce((s,e)=>s+Number(e.amount||0),0);
   $("#monthTrend").textContent=prevTotal?`${total<=prevTotal?"↓":"↑"} ${Math.abs((total-prevTotal)/prevTotal*100).toFixed(0)}% vs. mes anterior`:"Primer mes con datos";
   const tb=totalBudget(),pct=tb?Math.min(100,total/tb*100):0;$("#budgetUsed").textContent=tb?`${Math.round(pct)}% · ${money(total)} / ${money(tb)}`:"Sin presupuesto";$("#budgetProgress").style.width=`${pct}%`;
 
@@ -292,9 +307,19 @@ $("#recurringForm").onsubmit=async e=>{e.preventDefault();try{await addDoc(colle
 
 function renderCalendar(){
   const [y,m]=activeMonth.split("-").map(Number),days=new Date(y,m,0).getDate(),first=new Date(y,m-1,1).getDay();
+  const exByDay={},recByDay={};
+  monthExpenses().forEach(e=>{const d=Number(String(e.date||"").slice(8,10));(exByDay[d]??=[]).push(e)});
+  recurrings.filter(r=>r.active).forEach(r=>{const d=Math.max(1,Math.min(days,Number(r.day)||1));(recByDay[d]??=[]).push(r)});
+  const todayKey=today(),isThisMonth=todayKey.slice(0,7)===activeMonth,todayDay=Number(todayKey.slice(8,10));
   let html=`<div class="cal-head">${["D","L","M","M","J","V","S"].map(x=>`<b>${x}</b>`).join("")}</div><div class="cal-grid">${"<span></span>".repeat(first)}`;
-  for(let d=1;d<=days;d++){const ex=monthExpenses().filter(e=>Number(e.date.slice(8,10))===d),rec=recurrings.filter(r=>r.active&&Number(r.day)===d);html+=`<div class="cal-day"><b>${d}</b>${ex.slice(0,2).map(e=>`<i title="${esc(e.description)}">${money(e.amount)}</i>`).join("")}${rec.slice(0,2).map(r=>`<em title="${esc(r.name)}">${esc(r.name)}</em>`).join("")}</div>`}html+=`</div>`;$("#financialCalendar").innerHTML=html;
-  $("#recurringList").innerHTML=recurrings.length?recurrings.sort((a,b)=>a.day-b.day).map(r=>`<div class="recurring-row"><div class="cat-icon">↻</div><div><b>${esc(r.name)}</b><small>Día ${r.day} · ${esc(r.category)}</small></div><strong>${money(r.amount)}</strong>${isOwner()?`<button class="text-btn delete-recurring" data-id="${esc(r.id)}">×</button>`:""}</div>`).join(""):`<div class="empty"><b>Sin recurrentes</b>Agrega servicios, hipoteca, suscripciones o teléfono.</div>`;
+  for(let d=1;d<=days;d++){
+    const ex=exByDay[d]||[],rec=recByDay[d]||[],dayTotal=ex.reduce((s,e)=>s+Number(e.amount||0),0);
+    html+=`<div class="cal-day ${isThisMonth&&d===todayDay?"today":""} ${ex.length||rec.length?"has-events":""}"><b>${d}</b>${dayTotal?`<i title="${ex.length} gasto${ex.length===1?"":"s"}">${money(dayTotal)}</i>`:""}${rec.slice(0,2).map(r=>`<em title="${esc(r.name)}">↻ ${esc(r.name)}</em>`).join("")}${(ex.length||rec.length)?`<span class="mobile-event-dot"></span>`:""}</div>`;
+  }
+  html+=`</div>`;
+  $("#financialCalendar").innerHTML=html;
+  const active=recurrings.filter(r=>r.active).sort((a,b)=>a.day-b.day);
+  $("#recurringList").innerHTML=active.length?active.map(r=>`<div class="recurring-row"><div class="cat-icon subs">↻</div><div><b>${esc(r.name)}</b><small>Día ${r.day} · ${esc(r.category)}</small></div><strong>${money(r.amount)}</strong>${isOwner()?`<button class="text-btn delete-recurring" data-id="${esc(r.id)}">×</button>`:""}</div>`).join(""):`<div class="month-empty-state"><span>↻</span><b>Sin pagos recurrentes</b><small>Agrega renta, internet, teléfono o suscripciones para verlos también en el calendario.</small></div>`;
   $$(".delete-recurring").forEach(b=>b.onclick=async()=>{if(confirm("¿Eliminar este recurrente?"))await deleteDoc(doc(db,"households",householdId,"recurring",b.dataset.id))});
 }
 
@@ -306,7 +331,9 @@ function go(view){
   if((view==="members"||view==="admin")&&!isOwner()){view="home";toast(uiLang==="en"?"This section is only available to the Owner.":"Esta sección es solo para el Owner.")}
   $$(".page").forEach(p=>p.classList.remove("active"));$("#"+view+"Page").classList.add("active");$$("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
   const titles=uiLang==="en"?{home:`Good morning, ${(me?.displayName||"").split(" ")[0]||"family"} 👋`,activity:"Activity",balances:"Balances",month:"Monthly statement",members:"Members",admin:"Administration"}:{home:`Buenos días, ${(me?.displayName||"").split(" ")[0]||"familia"} 👋`,activity:"Actividad",balances:"Saldos",month:"Estado del mes",members:"Miembros",admin:"Administración"};
-  $("#pageTitle").textContent=titles[view]||"Mi Casa";applyLanguage();window.scrollTo({top:0,behavior:"smooth"})
+  $("#pageTitle").textContent=titles[view]||"Mi Casa";applyLanguage();
+  if(allDataReady()&&(view==="month"||view==="members")){requestAnimationFrame(()=>{if(view==="month")renderCalendar();if(view==="members"){const c=calc();renderMembers(c.paid,c.share,c.balances)}})}
+  window.scrollTo({top:0,behavior:"auto"})
 }
 $$("[data-view]").forEach(b=>b.onclick=()=>go(b.dataset.view));$$("[data-jump]").forEach(b=>b.onclick=()=>{const v=b.dataset.jump;if(v==="members"&&!isOwner())return;go(v)});
 $("#profileBtn").onclick=()=>{const mm=myMember();if(mm)openMemberDetail(mm.id)};

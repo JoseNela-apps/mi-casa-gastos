@@ -110,3 +110,51 @@ body{background:radial-gradient(circle at 72% -10%,#e1f5ff 0,transparent 28%),li
  .sheet{border-radius:30px 30px 0 0!important}.profile-stats.premium>div b{font-size:14px}.profile-stats.premium>div small{font-size:8px}
  .bottom-nav{left:10px!important;right:10px!important;bottom:calc(8px + env(safe-area-inset-bottom))!important;border-radius:25px!important;padding:7px 8px!important}
 }
+
+
+/* V6.1 — iPhone performance + calendar restoration */
+.app-loading #financialCalendar,
+.app-loading #membersList,
+.app-loading #monthPeople,
+.app-loading #recurringList{
+  position:relative;min-height:150px;overflow:hidden;
+}
+.app-loading #financialCalendar::after,
+.app-loading #membersList::after,
+.app-loading #monthPeople::after,
+.app-loading #recurringList::after{
+  content:"";position:absolute;inset:0;border-radius:18px;
+  background:linear-gradient(90deg,#f2f5f7 20%,#fafcfd 40%,#f2f5f7 60%);
+  background-size:220% 100%;animation:miCasaSkeleton 1.15s linear infinite;
+}
+@keyframes miCasaSkeleton{to{background-position:-220% 0}}
+.cal-day.today{outline:2px solid #2e8cf7;outline-offset:-2px}
+.cal-day.has-events{background:linear-gradient(180deg,#fff,#f9fcff)}
+.mobile-event-dot{display:none}
+.month-empty-state{min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px;color:#7a8797}
+.month-empty-state>span{width:46px;height:46px;border-radius:16px;background:#eef6ff;color:#2686ed;display:grid;place-items:center;font-size:22px;margin-bottom:10px}
+.month-empty-state b{color:#172131;margin-bottom:5px}.month-empty-state small{max-width:250px;line-height:1.45}
+@media(max-width:720px){
+  /* Safari/iPhone: expensive blur layers are intentionally reduced */
+  .finance-hero,.bottom-nav,.sidebar,.ai-insight-card{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+  .premium-subpage>.page-card,.premium-subpage .page-card,.weekly-card,.space-card,.activity-zone,.balance-zone,.people-zone{box-shadow:0 8px 24px rgba(35,60,85,.055)!important}
+  .month-premium{padding-top:14px!important}
+  .month-premium .statement{padding:22px!important;margin-bottom:14px!important}
+  .month-premium .statement strong{font-size:44px!important}
+  .month-grid{gap:14px!important}
+  .month-grid>.page-card:first-child{padding:16px 12px!important}
+  .financial-calendar{margin-top:10px!important}
+  .financial-calendar>div{min-height:0!important;padding:0!important;border-radius:0!important}
+  .cal-head,.cal-grid{gap:4px!important}
+  .cal-head b{font-size:9px!important;padding:4px 0!important}
+  .cal-day{position:relative;min-height:54px!important;padding:6px 4px!important;border-radius:11px!important}
+  .cal-day>b{font-size:10px!important}
+  .cal-day i,.cal-day em{display:none!important}
+  .cal-day.has-events .mobile-event-dot{display:block;position:absolute;width:5px;height:5px;border-radius:50%;background:#2e8cf7;left:50%;bottom:7px;transform:translateX(-50%)}
+  .cal-day.today>b{color:#1677df}
+  .month-empty-state{min-height:125px;padding:14px}
+  .recurring-row{padding:11px 2px!important}
+  #monthPeople .settle-row{padding:12px 2px!important}
+  .members-premium .page-card{min-height:0!important}
+  #membersList:empty::before{content:"Cargando familia…";display:block;padding:24px;text-align:center;color:#7c8999}
+}
