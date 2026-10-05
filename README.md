@@ -1,19 +1,11 @@
-# Mi Casa V6.2 — Calendar Fix
+# Mi Casa V9.2 — Fotos de comprobantes ≤ 200 KB
 
-Esta versión corrige el bloqueo de carga de V6.1.
+Cambio:
+- Toda foto tomada o elegida como comprobante se convierte automáticamente a JPEG y se comprime antes de guardarse.
+- Objetivo máximo: 200 KB por foto.
+- Mantiene proporción y reduce resolución/calidad progresivamente solo lo necesario.
+- En la previsualización se muestra el tamaño final y la etiqueta “optimizada”.
+- PDFs no se convierten; mantienen el límite existente de 350 KB.
+- Conserva todos los reportes globales/individuales y funciones de V9.1.
 
-Causa encontrada:
-las reglas finales anteriores no incluían las colecciones `budgets` y `recurring`.
-La V6.1 esperaba que los 6 streams terminaran antes de renderizar, así que un
-`permission-denied` en esas colecciones dejaba calendario, miembros y resumen
-mostrando skeletons indefinidamente.
-
-V6.2:
-- restaura el calendario completo;
-- agrega manejo de errores por stream: una colección opcional nunca congela la app;
-- conserva la carga agrupada para rendimiento móvil;
-- conserva calendario compacto en iPhone;
-- incluye las reglas Firestore completas corregidas con `budgets` y `recurring`;
-- actualiza el Service Worker para forzar assets V6.2.
-
-Para esta corrección SÍ es necesario publicar FIREBASE_RULES_FINAL_V6.2.txt.
+No requiere nuevas reglas de Firebase.

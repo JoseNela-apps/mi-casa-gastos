@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#f3f6fb">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -13,6 +13,8 @@
 </head>
 <body>
 <div id="toast" class="toast" aria-live="polite"></div>
+<div id="livePill" class="live-pill" aria-live="polite"><span id="livePillIcon">✓</span><b id="livePillText">Mi Casa</b></div>
+<div id="pullRefresh" class="pull-refresh"><span>↻</span><b>Actualizar Mi Casa</b></div>
 
 <section id="authView" class="auth-view">
   <div class="auth-art">
@@ -64,13 +66,14 @@
 <section id="appView" class="app hidden">
   <aside class="sidebar">
     <div class="side-brand"><span>⌂</span><div><small>MI CASA</small><b id="sideHouse">Finance</b></div></div>
-    <nav>
-      <button class="nav active" data-view="home"><span>⌂</span>Inicio</button>
-      <button class="nav" data-view="activity"><span>≡</span>Actividad</button>
-      <button class="nav" data-view="balances"><span>⇄</span>Saldos</button>
-      <button class="nav" data-view="month"><span>▣</span>Mes</button>
-      <button id="membersNav" class="nav owner-only" data-view="members"><span>◎</span>Miembros</button>
-      <button id="adminNav" class="nav hidden" data-view="admin"><span>⚙</span>Admin</button>
+    <nav class="v8-side-nav">
+      <button class="nav active" data-view="home"><span>⌂</span><b>Inicio</b></button>
+      <button class="nav" data-view="activity"><span>≡</span><b>Actividad</b></button>
+      <button class="nav" data-view="month"><span>▦</span><b>Calendario</b></button>
+      <button class="nav" data-view="vault"><span>▧</span><b>Comprobantes</b></button>
+      <button class="nav" data-view="family"><span>◎</span><b>Mi Casa</b></button>
+      <div class="side-nav-separator owner-only"></div>
+      <button id="adminNav" class="nav owner-only hidden" data-view="admin"><span>⚙</span><b>Admin</b></button>
     </nav>
     <div class="side-user">
       <div id="sideAvatar" class="avatar">?</div>
@@ -80,20 +83,25 @@
   </aside>
 
   <main class="main">
-    <header class="topbar">
+    <header class="topbar v8-topbar">
       <div><span class="eyebrow" id="monthEyebrow"></span><h1 id="pageTitle">Mi Casa</h1></div>
-      <div class="top-actions"><button class="lang-btn" id="languageToggle" type="button" title="Cambiar idioma">ES / EN</button><button class="icon-btn" id="profileBtn" title="Mi perfil">☺</button><button class="primary" id="newExpenseBtn">＋ Nuevo gasto</button></div>
+      <div class="top-actions"><button class="icon-btn" id="globalSearchBtn" title="Buscar">⌕</button><button class="lang-btn" id="languageToggle" type="button" title="Cambiar idioma">ES / EN</button><button class="icon-btn notification-button" id="notifBtn" title="Avisos">♢<span id="notifBadge" class="notif-badge hidden">0</span></button><button class="icon-btn" id="profileBtn" title="Mi perfil">☺</button><button class="primary v8-new" id="newExpenseBtn">＋ Nuevo gasto</button></div>
     </header>
 
     <div id="homePage" class="page active premium-home">
       <section class="mobile-welcome">
         <div><span class="eyebrow">FAMILY FINANCE</span><h2 id="mobileGreeting">Mi Casa</h2></div>
-        <button class="mobile-profile-orb" id="mobileProfileBtn" type="button"><span id="mobileProfileAvatar">☺</span></button>
+        <div class="mobile-header-actions"><button class="mobile-profile-orb" id="mobileSearchBtn" type="button" aria-label="Buscar">⌕</button><button class="mobile-profile-orb notification-button" id="mobileNotifBtn" type="button" aria-label="Avisos">♢<span id="mobileNotifBadge" class="notif-badge hidden">0</span></button><button class="mobile-profile-orb" id="mobileProfileBtn" type="button"><span id="mobileProfileAvatar">☺</span></button></div>
       </section>
 
+      <div class="home-range-selector" role="tablist" aria-label="Período del resumen">
+        <button type="button" data-home-range="today">Hoy</button>
+        <button type="button" data-home-range="week">Esta semana</button>
+        <button type="button" data-home-range="month" class="active">Este mes</button>
+      </div>
       <section class="finance-hero">
         <div class="finance-hero-top">
-          <div><span class="hero-kicker">TOTAL MONTHLY SPENDING</span><strong id="monthTotal">$0.00</strong><div class="hero-trend" id="monthTrend">Sin comparación aún</div></div>
+          <div><span class="hero-kicker" id="heroKicker">GASTO FAMILIAR · ESTE MES</span><strong id="monthTotal">$0.00</strong><div class="hero-trend" id="monthTrend">Sin comparación aún</div></div>
           <button class="hero-arrow" data-jump="month" aria-label="Ver mes">↗</button>
         </div>
         <div class="hero-chart-wrap">
@@ -112,6 +120,13 @@
         <div class="hero-aurora a"></div><div class="hero-aurora b"></div>
       </section>
 
+      <section class="intelligence-grid">
+        <article class="forecast-card intelligent-card"><div class="smart-card-head"><span class="smart-icon">↗</span><div><small>PREDICCIÓN DEL MES</small><b id="forecastTitle">Calculando tu cierre…</b></div></div><strong id="forecastAmount">$0.00</strong><p id="forecastCopy">Mi Casa proyectará el cierre usando tu ritmo actual.</p><div class="forecast-track"><i id="forecastTrack"></i></div></article>
+        <article class="safe-spend-card intelligent-card"><div class="smart-card-head"><span class="smart-icon">◎</span><div><small>SAFE TO SPEND</small><b>Disponible sin salirte del plan</b></div></div><strong id="safeToSpend">—</strong><p id="safeSpendCopy">Configura un presupuesto global para activar esta guía.</p></article>
+        <article class="health-card intelligent-card"><div class="health-ring" id="healthRing"><span id="healthScore">—</span></div><div class="health-copy"><small>SALUD FINANCIERA DEL HOGAR</small><b id="healthLabel">Construyendo estado…</b><p id="healthCopy">Presupuesto · recurrentes · saldos · gasto variable</p></div></article>
+      </section>
+      <section class="weekly-recap-card"><div class="weekly-recap-head"><div><span class="eyebrow">YOUR WEEK IN MI CASA</span><h2>Resumen semanal</h2></div><button type="button" id="openCompareBtn">Comparar ↗</button></div><div id="weeklyRecapGrid" class="weekly-recap-grid"></div></section>
+
       <section class="premium-actions">
         <button id="quickExpense"><span class="action-orb blue">＋</span><b>Gasto</b><small>Agregar</small></button>
         <button data-jump="balances"><span class="action-orb mint">⇄</span><b>Saldar</b><small>Pendientes</small></button>
@@ -124,7 +139,16 @@
         <div><span>MI CASA INSIGHT</span><b id="smartInsight">Construyendo tu resumen familiar…</b><small id="smartInsightSub">Tus datos se actualizan automáticamente.</small></div>
         <button data-jump="activity">→</button>
       </section>
+      <section class="premium-section family-carousel-section">
+        <div class="premium-section-head"><div><span class="eyebrow">MI CASA</span><h2>Tu familia, de un vistazo</h2></div><button data-jump="family">Ver Mi Casa</button></div>
+        <div id="peopleStrip" class="family-carousel"></div>
+      </section>
 
+
+      <section class="premium-section goals-home-section">
+        <div class="premium-section-head"><div><span class="eyebrow">METAS FAMILIARES</span><h2>Lo que estamos construyendo</h2></div><button type="button" data-jump="family">Ver metas</button></div>
+        <div id="homeGoals" class="home-goals"></div>
+      </section>
       <section class="premium-section">
         <div class="premium-section-head"><div><span class="eyebrow">FAMILY SPACES</span><h2>En qué vive Mi Casa</h2></div><button id="editBudgetsBtn">Ver todo</button></div>
         <div id="categoryList" class="space-carousel"></div>
@@ -138,15 +162,18 @@
         </div>
       </section>
 
+      <button class="receipt-vault-cta" id="openVaultFromHome" type="button">
+        <span class="vault-cta-icon">▧</span>
+        <span><small>DOCUMENTOS DE MI CASA</small><b>Comprobantes y facturas</b><em id="vaultCountHome">0 archivos guardados</em></span>
+        <strong>→</strong>
+      </button>
+
       <div class="premium-two-col">
         <section class="premium-section balance-zone">
           <div class="premium-section-head"><div><span class="eyebrow">FAMILY BALANCE</span><h2>Quién paga a quién</h2></div><button data-jump="balances">Ver todos</button></div>
           <div id="settlementPreview" class="balance-cards"></div>
         </section>
-        <section class="premium-section people-zone">
-          <div class="premium-section-head"><div><span class="eyebrow">OUR FAMILY</span><h2>Perfiles</h2></div><button class="owner-only" data-jump="members">Administrar</button></div>
-          <div id="peopleStrip" class="premium-people"></div>
-        </section>
+
       </div>
 
       <section class="premium-section activity-zone">
@@ -162,12 +189,13 @@
 
     <div id="activityPage" class="page premium-subpage activity-premium">
       <div class="page-card">
-        <div class="section-head"><div><span class="eyebrow">MOVIMIENTOS</span><h2>Actividad</h2></div><button class="primary small" id="activityAdd">＋ Agregar</button></div>
+        <div class="section-head"><div><span class="eyebrow">MOVIMIENTOS</span><h2>Actividad</h2></div><div class="section-actions"><button class="secondary small" id="activityVault">▧ Comprobantes</button><button class="primary small" id="activityAdd">＋ Agregar</button></div></div>
+        <div class="activity-chips" id="activityChips"><button class="active" data-activity-kind="all">Todos</button><button data-activity-kind="expense">Gastos</button><button data-activity-kind="receipt">Con comprobante</button></div>
         <div class="filter-row">
           <input id="activitySearch" placeholder="Buscar gasto…">
           <select id="activityCategory"><option value="">Todas las categorías</option><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Suscripciones</option><option>Otros</option></select>
         </div>
-        <div id="activityList" class="feed"></div>
+        <div id="activityList" class="feed"></div><button id="activityLoadMore" class="secondary wide hidden" type="button">Ver más movimientos</button>
       </div>
     </div>
 
@@ -191,7 +219,7 @@
       </div>
       <div class="month-grid">
         <div class="page-card">
-          <div class="section-head"><div><span class="eyebrow">CALENDARIO</span><h2>Compromisos del mes</h2></div><button id="addRecurringBtn" class="secondary small owner-only">＋ Recurrente</button></div>
+          <div class="section-head calendar-head"><div><span class="eyebrow">CALENDARIO</span><h2>Compromisos del mes</h2></div><div class="calendar-tools"><button type="button" class="calendar-nav" id="prevMonthBtn">‹</button><button type="button" class="calendar-current" id="calendarMonthLabel">Mes</button><button type="button" class="calendar-nav" id="nextMonthBtn">›</button><button id="addRecurringBtn" class="secondary small owner-only">＋ Recurrente</button></div></div>
           <div id="financialCalendar" class="financial-calendar"></div>
         </div>
         <div class="page-card">
@@ -200,13 +228,45 @@
         </div>
       </div>
       <div class="page-card"><h2>Resumen por persona</h2><div id="monthPeople"></div></div>
+      <section class="page-card subscription-center"><div class="section-head"><div><span class="eyebrow">SUSCRIPCIONES Y RECURRENTES</span><h2>Compromisos fijos</h2></div><div class="subscription-summary"><small>Al mes</small><b id="subscriptionMonthly">$0.00</b><small>Al año</small><b id="subscriptionYearly">$0.00</b></div></div><div id="subscriptionCards" class="subscription-cards"></div></section>
     </div>
 
-    <div id="membersPage" class="page premium-subpage members-premium">
-      <div class="page-card">
-        <div class="section-head"><div><span class="eyebrow">MI CASA</span><h2>Miembros</h2></div><button class="primary small owner-only" id="inviteBtn">＋ Agregar miembro</button></div>
-        <p class="muted">Toca un miembro para abrir su perfil financiero.</p>
-        <div id="membersList" class="members-list"></div>
+
+    <div id="vaultPage" class="page premium-subpage vault-premium">
+      <div class="page-card vault-shell">
+        <div class="section-head"><div><span class="eyebrow">DOCUMENTOS</span><h2>Bóveda de comprobantes</h2></div><button type="button" class="primary small" id="vaultAddExpense">＋ Nuevo gasto</button></div>
+        <p class="muted">Fotos y PDFs adjuntos a los gastos de Mi Casa. Toca cualquier archivo para previsualizarlo.</p>
+        <div class="vault-stats">
+          <div><span>Archivos</span><b id="vaultFileCount">0</b></div>
+          <div><span>Gastos con comprobante</span><b id="vaultExpenseCount">0</b></div>
+          <div><span>Este mes</span><b id="vaultMonthCount">0</b></div>
+        </div>
+        <div class="vault-filters">
+          <input id="vaultSearch" placeholder="Buscar comprobante o gasto…">
+          <select id="vaultMember"><option value="">Todas las personas</option></select>
+          <select id="vaultCategory"><option value="">Todas las categorías</option><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Suscripciones</option><option>Otros</option></select>
+        </div>
+        <div id="vaultGrid" class="vault-grid"></div>
+      </div>
+    </div>
+
+    <div id="familyPage" class="page premium-subpage family-hub-page">
+      <section class="family-hub-hero">
+        <div><span class="eyebrow">NUESTRO HOGAR</span><h2 id="familyHubTitle">Mi Casa</h2><p id="familyHubStatus">Familia conectada y cuentas al día.</p></div>
+        <div id="familyHubAvatars" class="family-hub-avatars"></div>
+        <div class="family-hub-total"><small>Gastos del mes</small><strong id="familyHubTotal">$0.00</strong></div>
+      </section>
+      <div class="page-card family-members-card">
+        <div class="section-head"><div><span class="eyebrow">PERSONAS</span><h2>Familia</h2></div><button class="primary small owner-only" id="inviteBtn">＋ Agregar miembro</button></div>
+        <p class="muted">Toca un perfil para ver su balance, actividad y personalización.</p>
+        <div id="membersList" class="members-list family-members-list"></div>
+      </div>
+      <section class="page-card family-goals-card"><div class="section-head"><div><span class="eyebrow">METAS</span><h2>Objetivos familiares</h2></div><button class="primary small owner-only" id="addGoalBtn">＋ Nueva meta</button></div><div id="goalsGrid" class="goals-grid"></div></section>
+      <section class="page-card automation-center owner-only"><div class="section-head"><div><span class="eyebrow">AUTOMATIZACIONES</span><h2>Reglas inteligentes</h2></div><button class="secondary small" id="addAutomationBtn">＋ Regla</button></div><p class="muted">Alertas por presupuesto, gastos grandes, comprobantes faltantes y pagos próximos.</p><div id="automationList" class="automation-list"></div></section>
+      <div class="family-hub-actions">
+        <button type="button" data-jump="balances"><span>⇄</span><div><b>Saldos familiares</b><small>Quién paga a quién</small></div><em>→</em></button>
+        <button type="button" data-jump="vault"><span>▧</span><div><b>Comprobantes</b><small>Documentos de la casa</small></div><em>→</em></button>
+        <button type="button" class="owner-only" data-jump="admin"><span>⚙</span><div><b>Administración</b><small>Accesos y configuración</small></div><em>→</em></button>
       </div>
     </div>
 
@@ -215,25 +275,49 @@
         <div class="section-head"><div><span class="eyebrow">OWNER</span><h2>Administración</h2></div></div>
         <p class="muted">Controla acceso, recuperación de cuenta y estructura del hogar.</p>
         <div class="admin-callout"><b>Seguridad</b><p>Las contraseñas nunca son visibles. Puedes enviar un enlace seguro de restablecimiento.</p></div>
-        <div id="adminUsers" class="members-list"></div>
+        <div id="adminUsers" class="members-list"></div><div class="admin-smart-grid">
+<button type="button" id="adminBudgetAdvanced"><span>◔</span><div><b>Presupuesto inteligente</b><small>Global, semanal y rollover</small></div><em>→</em></button>
+<button type="button" id="adminAutomations"><span>✦</span><div><b>Automatizaciones</b><small>Alertas y reglas internas</small></div><em>→</em></button>
+<button type="button" id="adminCompare"><span>↔</span><div><b>Comparar meses</b><small>Tendencias por categoría</small></div><em>→</em></button>
+</div>
       </div>
     </div>
   </main>
 
-  <nav class="bottom-nav">
+  <nav class="bottom-nav v8-dock" aria-label="Navegación principal">
     <button class="active" data-view="home"><span>⌂</span><small>Inicio</small></button>
     <button data-view="activity"><span>≡</span><small>Actividad</small></button>
-    <button id="mobileAdd" class="add"><span>＋</span></button>
-    <button data-view="balances"><span>⇄</span><small>Saldos</small></button>
-    <button data-view="month"><span>▣</span><small>Mes</small></button>
+    <button id="mobileAdd" class="add" aria-label="Acciones rápidas"><span>＋</span></button>
+    <button data-view="month"><span>▦</span><small>Calendario</small></button>
+    <button data-view="family"><span>◎</span><small>Mi Casa</small></button>
   </nav>
 </section>
 
 <div id="reportLanguageModal" class="report-lang-modal hidden" role="dialog" aria-modal="true">
-  <div class="report-lang-card">
+  <div class="report-lang-card report-builder-card">
     <span class="eyebrow">REPORTE PDF</span>
-    <h2>Selecciona el idioma</h2>
-    <p>El reporte se preparará completo en el idioma que elijas.</p>
+    <h2>¿Qué reporte quieres imprimir?</h2>
+    <p>Elige un reporte global de toda la casa o un estado individual por persona.</p>
+
+    <div class="report-type-grid">
+      <button type="button" class="report-type active" data-report-type="global">
+        <span>⌂</span><div><b>Reporte global</b><small>Gastos, personas, saldos y quién paga a quién.</small></div>
+      </button>
+      <button type="button" class="report-type" data-report-type="member">
+        <span>◎</span><div><b>Reporte por usuario</b><small>Estado individual, obligaciones y movimientos.</small></div>
+      </button>
+    </div>
+
+    <label id="reportMemberWrap" class="report-member-wrap hidden">
+      Persona
+      <select id="reportMemberSelect"></select>
+    </label>
+
+    <div class="report-preview-note" id="reportPreviewNote">
+      Incluye resumen mensual, categorías, saldos, transferencias pendientes, pagos registrados, gastos y comprobantes.
+    </div>
+
+    <span class="report-language-label">Idioma del PDF</span>
     <div class="report-lang-actions"><button class="secondary" id="reportSpanish">Español</button><button class="primary" id="reportEnglish">English</button></div>
     <button class="text-btn wide" id="reportLanguageCancel">Cancelar</button>
   </div>
@@ -241,7 +325,26 @@
 
 <div id="overlay" class="overlay hidden"></div>
 
-<aside id="expenseSheet" class="sheet hidden" aria-modal="true">
+
+<aside id="quickActionsSheet" class="sheet action-sheet small-sheet hidden" data-detent="compact">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn quickActionsCancel">Cerrar</button><b>¿Qué quieres hacer?</b><span></span></div>
+  <div class="quick-actions-grid">
+    <button type="button" id="qaExpense"><span class="qa-icon blue">＋</span><div><b>Nuevo gasto</b><small>Registra una compra o factura</small></div></button>
+    <button type="button" id="qaSettle"><span class="qa-icon mint">⇄</span><div><b>Registrar pago</b><small>Revisa saldos pendientes</small></div></button>
+    <button type="button" id="qaReceipt"><span class="qa-icon lilac">▧</span><div><b>Subir comprobante</b><small>Adjúntalo a un nuevo gasto</small></div></button>
+    <button type="button" id="qaRecurring" class="owner-only"><span class="qa-icon peach">↻</span><div><b>Pago recurrente</b><small>Renta, teléfono, servicios…</small></div></button>
+    <button type="button" id="qaCloseMonth" class="owner-only"><span class="qa-icon dark">✓</span><div><b>Cerrar mes</b><small>Revisa el resumen antes de cerrar</small></div></button>
+  </div>
+</aside>
+
+<aside id="transactionActionsSheet" class="sheet action-sheet small-sheet hidden" data-detent="compact">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn transactionActionsCancel">Cerrar</button><b>Acciones del gasto</b><span></span></div>
+  <div id="transactionActionsContent" class="quick-actions-grid compact-actions"></div>
+</aside>
+
+<aside id="expenseSheet" class="sheet hidden" data-detent="full" aria-modal="true">
   <div class="sheet-handle"></div>
   <div class="sheet-head"><button class="text-btn sheetCancel">Cancelar</button><b id="expenseSheetTitle">Nuevo gasto</b><button id="saveExpenseTop" class="text-btn accent">Guardar</button></div>
   <form id="expenseForm">
@@ -258,7 +361,7 @@
     </div>
     <div id="splitBox" class="split-box"><div><b>División</b><small id="splitHelp">Se divide por igual.</small></div><span id="perPerson">$0.00 c/u</span></div>
     <div id="customSplitRows" class="custom-split-rows hidden"></div>
-    <label class="receipt-input">Comprobante <span class="optional">(imagen pequeña o PDF)</span><input id="expenseReceipt" type="file" accept="image/*,application/pdf" multiple></label>
+    <label class="receipt-input">Comprobante <span class="optional">(las fotos se optimizan automáticamente a máximo 200 KB)</span><input id="expenseReceipt" type="file" accept="image/*,application/pdf" multiple></label>
     <div id="receiptPreview" class="receipt-placeholder"><span>▧</span><div><b>Sin comprobante</b><small>Puedes adjuntar varias fotos o PDFs al mismo gasto.</small></div></div>
     <label>Nota <span class="optional">(opcional)</span><textarea id="expenseNotes" rows="2" maxlength="300" placeholder="Añade algún detalle…"></textarea></label>
     <button class="primary wide" type="submit">Guardar gasto</button>
@@ -266,7 +369,7 @@
   </form>
 </aside>
 
-<aside id="memberSheet" class="sheet small-sheet hidden">
+<aside id="memberSheet" class="sheet small-sheet hidden" data-detent="medium">
   <div class="sheet-handle"></div>
   <div class="sheet-head"><button class="text-btn memberCancel">Cancelar</button><b>Agregar miembro</b><span></span></div>
   <form id="memberForm">
@@ -278,7 +381,7 @@
 </aside>
 
 
-<aside id="profileEditSheet" class="sheet small-sheet hidden">
+<aside id="profileEditSheet" class="sheet small-sheet hidden" data-detent="medium">
   <div class="sheet-handle"></div>
   <div class="sheet-head"><button class="text-btn profileEditCancel">Cancelar</button><b>Personalizar perfil</b><button id="saveProfileTop" class="text-btn accent">Guardar</button></div>
   <form id="profileEditForm">
@@ -301,13 +404,13 @@
   </form>
 </aside>
 
-<aside id="budgetSheet" class="sheet small-sheet hidden">
+<aside id="budgetSheet" class="sheet small-sheet hidden" data-detent="medium">
   <div class="sheet-handle"></div>
   <div class="sheet-head"><button class="text-btn budgetCancel">Cancelar</button><b>Presupuestos</b><button id="saveBudgetsTop" class="text-btn accent">Guardar</button></div>
-  <form id="budgetForm"><div id="budgetRows" class="budget-rows"></div><button class="primary wide" type="submit">Guardar presupuestos</button></form>
+  <form id="budgetForm"><div class="advanced-budget-panel"><span class="eyebrow">PLAN GENERAL</span><div class="form-grid"><label>Presupuesto global<input id="globalBudgetInput" inputmode="decimal" placeholder="Ej. 2500"></label><label>Límite semanal<input id="weeklyBudgetInput" inputmode="decimal" placeholder="Ej. 650"></label></div><label class="toggle-row"><span><b>Rollover del sobrante</b><small>Conservar lo no usado como referencia del siguiente mes.</small></span><input id="rolloverBudgetInput" type="checkbox"></label></div><div id="budgetRows" class="budget-rows"></div><button class="primary wide" type="submit">Guardar presupuestos</button></form>
 </aside>
 
-<aside id="recurringSheet" class="sheet small-sheet hidden">
+<aside id="recurringSheet" class="sheet small-sheet hidden" data-detent="medium">
   <div class="sheet-handle"></div>
   <div class="sheet-head"><button class="text-btn recurringCancel">Cancelar</button><b>Pago recurrente</b><span></span></div>
   <form id="recurringForm">
@@ -319,12 +422,43 @@
   </form>
 </aside>
 
-<aside id="memberDetailSheet" class="sheet small-sheet hidden">
+<aside id="memberDetailSheet" class="sheet small-sheet hidden" data-detent="medium">
   <div class="sheet-handle"></div>
   <div class="sheet-head"><button class="text-btn detailCancel">Cerrar</button><b>Perfil financiero</b><span></span></div>
   <div id="memberDetailContent"></div>
 </aside>
 
+
+
+<aside id="notificationSheet" class="sheet small-sheet hidden" data-detent="medium">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn notificationCancel">Cerrar</button><b>Centro de avisos</b><button class="text-btn accent" id="markNotificationsRead">Marcar leído</button></div>
+  <div id="notificationList" class="notification-list"></div>
+</aside>
+
+<aside id="dayDetailSheet" class="sheet small-sheet hidden" data-detent="medium">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn dayDetailCancel">Cerrar</button><b id="dayDetailTitle">Día</b><span></span></div>
+  <div id="dayDetailContent"></div>
+</aside>
+
+<aside id="spaceDetailSheet" class="sheet small-sheet hidden" data-detent="medium">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn spaceDetailCancel">Cerrar</button><b id="spaceDetailTitle">Family Space</b><span></span></div>
+  <div id="spaceDetailContent"></div>
+</aside>
+
+<aside id="monthCloseSheet" class="sheet small-sheet hidden" data-detent="medium">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn closeSummaryCancel">Cancelar</button><b>Cierre de mes</b><span></span></div>
+  <div id="monthCloseContent"></div>
+</aside>
+
+
+<aside id="goalSheet" class="sheet small-sheet hidden" data-detent="medium"><div class="sheet-handle"></div><div class="sheet-head"><button class="text-btn goalCancel">Cancelar</button><b>Meta familiar</b><button class="text-btn accent" id="saveGoalTop">Guardar</button></div><form id="goalForm"><input id="goalId" type="hidden"><label>Nombre<input id="goalName" required maxlength="60" placeholder="Ej. Vacaciones"></label><div class="form-grid"><label>Meta $<input id="goalTarget" required inputmode="decimal" placeholder="1500"></label><label>Ahorrado $<input id="goalCurrent" inputmode="decimal" placeholder="0"></label></div><label>Fecha objetivo<input id="goalDate" type="date"></label><label>Icono<select id="goalIcon"><option value="✈">✈ Vacaciones</option><option value="⌂">⌂ Casa</option><option value="▣">▣ Tecnología</option><option value="★">★ Especial</option><option value="♡">♡ Familia</option></select></label><button class="primary wide" type="submit">Guardar meta</button><button class="danger wide hidden" type="button" id="deleteGoalBtn">Eliminar meta</button></form></aside>
+<aside id="automationSheet" class="sheet small-sheet hidden" data-detent="medium"><div class="sheet-handle"></div><div class="sheet-head"><button class="text-btn automationCancel">Cancelar</button><b>Regla inteligente</b><span></span></div><form id="automationForm"><label>Cuando…<select id="automationType"><option value="budget80">una categoría llegue al 80%</option><option value="largeExpense">un gasto supere un monto</option><option value="missingReceipt">un gasto grande no tenga comprobante</option><option value="recurringSoon">falte poco para un recurrente</option></select></label><label>Categoría<select id="automationCategory"><option value="">Cualquier categoría</option><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Suscripciones</option><option>Otros</option></select></label><label>Umbral / monto<input id="automationThreshold" inputmode="decimal" placeholder="100"></label><button class="primary wide" type="submit">Activar regla</button></form></aside>
+<aside id="compareSheet" class="sheet small-sheet hidden" data-detent="full"><div class="sheet-handle"></div><div class="sheet-head"><button class="text-btn compareCancel">Cerrar</button><b>Comparar meses</b><span></span></div><div id="compareContent"></div></aside>
+<aside id="globalSearchSheet" class="sheet small-sheet hidden" data-detent="full"><div class="sheet-handle"></div><div class="sheet-head"><button class="text-btn searchCancel">Cerrar</button><b>Buscar en Mi Casa</b><span></span></div><div class="universal-search-wrap"><span>⌕</span><input id="globalSearchInput" placeholder="AT&T, Alberto, comida, PDF, $369…"></div><div id="globalSearchResults" class="global-search-results"></div></aside>
 
 <div id="attachmentViewer" class="attachment-viewer hidden" aria-hidden="true">
   <div class="attachment-viewer-backdrop" data-close-preview></div>
