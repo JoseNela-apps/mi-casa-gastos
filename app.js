@@ -244,9 +244,11 @@ $$("#activityChips [data-activity-kind]").forEach(b=>b.addEventListener("click",
 function renderMembers(paid,share,balances){
   $("#membersList").innerHTML=members.map(m=>`<button class="member-row clickable-member family-hub-member" data-person="${esc(m.id)}">${memberAvatar(m,"lg")}<div><b>${esc(m.name)}</b><small>${m.authUid===me?.uid?"Tu perfil · ":""}${esc(m.email||"Sin email")}</small><em>${balances[m.id]>0.005?"+"+money(balances[m.id]):balances[m.id]<-.005?"−"+money(-balances[m.id]):"Saldado"}</em></div><span class="role-pill">${m.role==="owner"?"Owner":"Member"}</span></button>`).join("");
   $$(".clickable-member").forEach(b=>b.onclick=()=>openMemberDetail(b.dataset.person));
-  $("#adminUsers").innerHTML=isOwner()?members.map(m=>`<div class="member-row admin-user">${memberAvatar(m)}<div class="member-main"><b>${esc(m.name)}</b><small>${esc(m.email||"Sin email")} · ${m.authUid?"Activo":m.email?"Pendiente":"Sin acceso"}</small></div><div class="admin-actions">${m.email?`<button class="secondary mini reset-access" data-email="${esc(m.email)}">Restablecer contraseña</button>`:""}${m.authUid!==me.uid?`<button class="danger mini remove-member" data-member="${esc(m.id)}">Eliminar</button>`:""}</div></div>`).join(""):`<div class="empty"><b>Solo el Owner</b>Esta sección está reservada para el administrador.</div>`;
-  $$(".reset-access").forEach(b=>b.onclick=async()=>{try{await sendPasswordResetEmail(auth,b.dataset.email);toast("Enlace enviado ✓")}catch(e){toast("No se pudo enviar.")}});
-  $$(".remove-member").forEach(b=>b.onclick=async()=>{if(!confirm("¿Quitar este miembro del hogar?"))return;try{await deleteDoc(doc(db,"households",householdId,"members",b.dataset.member));toast("Miembro eliminado")}catch(e){toast("No se pudo eliminar.")}});
+  $("#adminUsers").innerHTML=isOwner()?members.map(m=>{const status=m.authUid?"Activo":m.email?"Pendiente":"Sin acceso";return `<div class="member-row admin-user">${memberAvatar(m)}<div class="member-main"><b>${esc(m.name)}</b><small>${esc(m.email||"Sin email")} · ${status}</small></div><div class="admin-actions"><button class="secondary mini edit-admin-member" data-member="${esc(m.id)}">Editar</button><button class="secondary mini edit-admin-avatar" data-member="${esc(m.id)}">Avatar</button>${m.email?`<button class="secondary mini reset-access" data-email="${esc(m.email)}">Restablecer contraseña</button>`:""}${m.authUid!==me.uid?`<button class="danger mini remove-member" data-member="${esc(m.id)}">Eliminar</button>`:""}</div></div>`}).join(""):`<div class="empty"><b>Solo el Owner</b>Esta sección está reservada para el administrador.</div>`;
+  $$(".edit-admin-member").forEach(b=>b.onclick=()=>openMemberAdminEditor(b.dataset.member));
+  $$(".edit-admin-avatar").forEach(b=>b.onclick=()=>openProfileEditor(b.dataset.member));
+  $$(".reset-access").forEach(b=>b.onclick=async()=>{try{await sendPasswordResetEmail(auth,b.dataset.email);toast("Enlace de restablecimiento enviado ✓")}catch(e){console.error(e);toast("No se pudo enviar el enlace.")}});
+  $$(".remove-member").forEach(b=>b.onclick=async()=>{const id=b.dataset.member,m=member(id);if(!confirm(`¿Quitar a ${m.name} del hogar? Sus gastos históricos no se borrarán.`))return;try{if(m.email&&!m.authUid){try{await deleteDoc(doc(db,"invites",emailKey(m.email)))}catch{}}await deleteDoc(doc(db,"households",householdId,"members",id));toast("Miembro eliminado")}catch(e){console.error(e);toast("No se pudo eliminar.")}});
   $("#monthPeople").innerHTML=members.map(m=>`<div class="settle-row"><div class="settle-person">${memberAvatar(m)}<div><b>${esc(m.name)}</b><small>Pagó ${money(paid[m.id]||0)}</small></div></div><span></span><div class="settle-person right"><div><b>${balances[m.id]>=0?"Recibe":"Debe"} ${money(Math.abs(balances[m.id]||0))}</b><small>Parte ${money(share[m.id]||0)}</small></div></div></div>`).join("");
 }
 function openMemberDetail(id){
@@ -434,9 +436,49 @@ $("#expenseForm").onsubmit=async e=>{
 };
 $("#deleteExpense").onclick=async()=>{const id=$("#expenseId").value;if(!id||!confirm("¿Eliminar este gasto?"))return;try{await deleteDoc(doc(db,"households",householdId,"expenses",id));closeSheets();toast("Gasto eliminado")}catch(e){toast("No tienes permiso para eliminarlo.")}};
 
-$("#inviteBtn").onclick=()=>{$("#memberForm").reset();openSheet("#memberSheet")};
-$("#memberForm").onsubmit=async e=>{e.preventDefault();if(!isOwner())return;const name=$("#memberName").value.trim(),email=$("#memberEmail").value.trim().toLowerCase();try{const mref=doc(collection(db,"households",householdId,"members"));await setDoc(mref,{name,email:email||null,role:"member",authUid:null,inviteStatus:email?"pending":"none",createdAt:serverTimestamp()});if(email)await setDoc(doc(db,"invites",emailKey(email)),{email,householdId,memberId:mref.id,householdName:household.name||"Mi Casa",invitedBy:me.uid,createdAt:serverTimestamp()});closeSheets();toast(email?"Invitación preparada ✓":"Miembro agregado ✓")}catch(e){console.error(e);toast("No se pudo agregar.")}};
-
+function memberAccessLabel(m){return m?.authUid?"Activo":m?.email?"Pendiente de activación":"Sin acceso"}
+function refreshMemberAdminPreview(){
+  const id=$("#memberEditId").value,m=id?member(id):null,name=$("#memberName").value.trim()||m?.name||"Nuevo miembro";
+  $("#memberAdminPreviewName").textContent=name;$("#memberAdminAccessText").textContent=memberAccessLabel(m);
+  const fake={...(m||{}),name};$("#memberAdminAvatarPreview").outerHTML=memberAvatar(fake,"profile-preview-avatar").replace('class="avatar','id="memberAdminAvatarPreview" class="avatar');
+}
+function openNewMemberAdmin(){
+  if(!isOwner())return;$("#memberForm").reset();$("#memberEditId").value="";$("#memberSheetTitle").textContent="Agregar miembro";
+  $("#memberResetPassword").classList.add("hidden");$("#memberEditAvatar").classList.add("hidden");refreshMemberAdminPreview();openSheet("#memberSheet")
+}
+function openMemberAdminEditor(id){
+  if(!isOwner())return;const m=member(id);$("#memberForm").reset();$("#memberEditId").value=id;$("#memberName").value=m.name||"";$("#memberEmail").value=m.email||"";
+  $("#memberSheetTitle").textContent="Editar usuario";$("#memberResetPassword").classList.toggle("hidden",!m.email);$("#memberEditAvatar").classList.remove("hidden");refreshMemberAdminPreview();openSheet("#memberSheet")
+}
+$("#inviteBtn").onclick=openNewMemberAdmin;
+$("#memberName")?.addEventListener("input",refreshMemberAdminPreview);
+$("#saveMemberTop")?.addEventListener("click",()=>$("#memberForm").requestSubmit());
+$("#memberEditAvatar")?.addEventListener("click",()=>{const id=$("#memberEditId").value;if(id){closeSheets();setTimeout(()=>openProfileEditor(id),100)}});
+$("#memberResetPassword")?.addEventListener("click",async()=>{const email=$("#memberEmail").value.trim().toLowerCase();if(!email){toast("Primero agrega un email.");return}try{await sendPasswordResetEmail(auth,email);toast("Enlace de restablecimiento enviado ✓")}catch(e){console.error(e);toast("No se pudo enviar. Verifica que esa cuenta ya esté activa.")}});
+$("#memberForm").onsubmit=async e=>{
+  e.preventDefault();if(!isOwner())return;
+  const id=$("#memberEditId").value,name=$("#memberName").value.trim(),email=$("#memberEmail").value.trim().toLowerCase();
+  if(!name){toast("Ingresa un nombre.");return}
+  try{
+    if(id){
+      const m=member(id),oldEmail=(m.email||"").toLowerCase();
+      // Auth email cannot be silently changed from the browser for another signed-in user.
+      // For an already-active account, keep authUid and update the household contact/invite email only.
+      await setDoc(doc(db,"households",householdId,"members",id),{name,email:email||null,inviteStatus:m.authUid?"active":email?"pending":"none",updatedAt:serverTimestamp()},{merge:true});
+      if(oldEmail&&oldEmail!==email&&!m.authUid){try{await deleteDoc(doc(db,"invites",emailKey(oldEmail)))}catch{}}
+      if(email&&!m.authUid)await setDoc(doc(db,"invites",emailKey(email)),{email,householdId,memberId:id,householdName:household.name||"Mi Casa",invitedBy:me.uid,createdAt:serverTimestamp()},{merge:true});
+      closeSheets();toast(m.authUid&&oldEmail!==email?"Usuario actualizado. El email de acceso activo debe cambiarlo el usuario o un backend Admin.":"Usuario actualizado ✓");
+    }else{
+      const duplicate=members.find(m=>email&&String(m.email||"").toLowerCase()===email);
+      if(duplicate){toast("Ese email ya pertenece a un miembro.");return}
+      const mref=doc(collection(db,"households",householdId,"members"));
+      await setDoc(mref,{name,email:email||null,role:"member",authUid:null,inviteStatus:email?"pending":"none",createdAt:serverTimestamp()});
+      if(email)await setDoc(doc(db,"invites",emailKey(email)),{email,householdId,memberId:mref.id,householdName:household.name||"Mi Casa",invitedBy:me.uid,createdAt:serverTimestamp()},{merge:true});
+      closeSheets();toast(email?"Miembro agregado · acceso preparado ✓":"Miembro agregado ✓");
+    }
+  }catch(e){console.error(e);toast("No se pudo guardar el usuario. Revisa las reglas V9.3.")}
+};
+$(".memberCancel")?.addEventListener("click",closeSheets);
 
 let profileDraft={avatarData:null,avatarPreset:"initials",accentColor:"#4a90e2"};
 function openProfileEditor(id){

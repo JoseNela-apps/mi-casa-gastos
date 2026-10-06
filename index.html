@@ -275,7 +275,7 @@
         <div class="section-head"><div><span class="eyebrow">OWNER</span><h2>Administración</h2></div></div>
         <p class="muted">Controla acceso, recuperación de cuenta y estructura del hogar.</p>
         <div class="admin-callout"><b>Seguridad</b><p>Las contraseñas nunca son visibles. Puedes enviar un enlace seguro de restablecimiento.</p></div>
-        <div id="adminUsers" class="members-list"></div><div class="admin-smart-grid">
+        <div class="admin-edit-hint"><b>Administración de usuarios</b><span>Edita nombre, email, acceso y avatar. Las contraseñas se administran de forma segura mediante enlace de restablecimiento.</span></div><div id="adminUsers" class="members-list"></div><div class="admin-smart-grid">
 <button type="button" id="adminBudgetAdvanced"><span>◔</span><div><b>Presupuesto inteligente</b><small>Global, semanal y rollover</small></div><em>→</em></button>
 <button type="button" id="adminAutomations"><span>✦</span><div><b>Automatizaciones</b><small>Alertas y reglas internas</small></div><em>→</em></button>
 <button type="button" id="adminCompare"><span>↔</span><div><b>Comparar meses</b><small>Tendencias por categoría</small></div><em>→</em></button>
@@ -371,15 +371,23 @@
 
 <aside id="memberSheet" class="sheet small-sheet hidden" data-detent="medium">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn memberCancel">Cancelar</button><b>Agregar miembro</b><span></span></div>
+  <div class="sheet-head"><button class="text-btn memberCancel">Cancelar</button><b id="memberSheetTitle">Agregar miembro</b><button id="saveMemberTop" class="text-btn accent">Guardar</button></div>
   <form id="memberForm">
+    <input id="memberEditId" type="hidden">
+    <div class="admin-member-preview">
+      <div id="memberAdminAvatarPreview" class="avatar profile-preview-avatar">?</div>
+      <div><b id="memberAdminPreviewName">Nuevo miembro</b><small id="memberAdminAccessText">Sin acceso todavía</small></div>
+    </div>
     <label>Nombre<input id="memberName" required maxlength="40" placeholder="Nombre"></label>
-    <label>Email <span class="optional">(para darle acceso)</span><input id="memberEmail" type="email" placeholder="persona@email.com"></label>
-    <p class="info-note">El email debe coincidir exactamente con el que la persona usará para activar su acceso.</p>
-    <button class="primary wide" type="submit">Agregar / invitar</button>
+    <label>Email <span class="optional">(para darle acceso)</span><input id="memberEmail" type="email" autocomplete="off" placeholder="persona@email.com"></label>
+    <p class="info-note">Al guardar un email, Mi Casa prepara el acceso para esa persona. Si ya tiene cuenta, conserva su UID; si no, podrá activar su acceso con ese mismo email.</p>
+    <div class="admin-member-actions">
+      <button type="button" class="secondary hidden" id="memberResetPassword">Enviar restablecimiento</button>
+      <button type="button" class="secondary hidden" id="memberEditAvatar">Editar avatar</button>
+    </div>
+    <button class="primary wide" type="submit">Guardar miembro</button>
   </form>
 </aside>
-
 
 <aside id="profileEditSheet" class="sheet small-sheet hidden" data-detent="medium">
   <div class="sheet-handle"></div>
