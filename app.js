@@ -200,6 +200,8 @@ function renderAll(){
   renderCategories(homeTotal,homeEx);
   renderActivity();
   renderBills();
+  renderTodayActions();
+  renderMonthCloseCenter();
   renderMembers(paid,share,balances);
   if($("#familyHubTitle"))$("#familyHubTitle").textContent=household?.name||"Mi Casa";
   if($("#familyHubTotal"))$("#familyHubTotal").textContent=money(monthTotalValue);
@@ -259,14 +261,58 @@ $("#activityLoadMore")?.addEventListener("click",()=>{activityPageSize+=25;rende
 $$("#activityChips [data-activity-kind]").forEach(b=>b.addEventListener("click",()=>{activityKind=b.dataset.activityKind;activityPageSize=25;$$("#activityChips button").forEach(x=>x.classList.toggle("active",x===b));renderActivity()}));
 
 
+
+function expenseStatus(e){
+  if(e.paymentStatus==="pending"||!e.payerId)return "pending";
+  const linked=settlements.filter(s=>s.status==="paid"&&s.expenseId===e.id).reduce((sum,s)=>sum+Number(s.amount||0),0);
+  const total=Object.values(effectiveExpenseShares(e)).reduce((s,v)=>s+Number(v||0),0);
+  if(linked>0&&linked+0.005<total)return "partial";
+  if(linked>=total&&total>0)return "settled";
+  return e.useCoverage===true?"covered":"paid";
+}
+function statusLabel(s){return ({paid:"Pagado",pending:"Pendiente",partial:"Parcial",settled:"Saldado",covered:"Cubierto"})[s]||s}
+function statusPill(e){const s=expenseStatus(e);return `<span class="status-pill ${s}">${statusLabel(s)}</span>`}
+function dueDateFor(e){return e.dueDate||e.date||""}
+function settlementTotalForExpense(e,from=null){return settlements.filter(s=>s.status==="paid"&&s.expenseId===e.id&&(!from||s.from===from)).reduce((sum,s)=>sum+Number(s.amount||0),0)}
+function openExpenseDetail(e){
+  if(!e)return;
+  const effective=effectiveExpenseShares(e),attachments=expenseAttachments(e),participants=(e.participantIds||[]).map(id=>member(id).name).join(", ")||"—";
+  $("#expenseDetailEditBtn").dataset.id=e.id;
+  $("#expenseDetailContent").innerHTML=`<div class="detail-hero"><div>${statusPill(e)}<h2>${esc(e.description)}</h2><p>${esc(e.category||"Otros")} · ${esc(e.date)}</p></div><strong>${money(e.amount)}</strong></div>
+  <div class="detail-grid"><div><span>Estado</span><b>${statusLabel(expenseStatus(e))}</b></div><div><span>Pagó</span><b>${e.payerId?esc(member(e.payerId).name):"Nadie todavía"}</b></div><div><span>Participantes</span><b>${esc(participants)}</b></div><div><span>Cobertura</span><b>${esc(coverageTextForExpense(e)||"Individual")}</b></div><div><span>Pagos aplicados</span><b>${money(settlementTotalForExpense(e))}</b></div><div><span>Comprobantes</span><b>${attachments.length}</b></div></div>
+  <section class="detail-section"><h3>Responsabilidad</h3>${Object.entries(effective).map(([id,v])=>`<div class="detail-row"><span>${esc(member(id).name)}</span><b>${money(v)}</b></div>`).join("")||"<p>Sin división.</p>"}</section>
+  <section class="detail-section"><h3>Acciones</h3><div class="detail-actions"><button class="secondary" data-detail-action="payment">Registrar pago</button><button class="secondary" data-detail-action="receipt">Ver comprobantes</button></div></section>`;
+  $$("#expenseDetailContent [data-detail-action]").forEach(b=>b.onclick=()=>{if(b.dataset.detailAction==="payment"){const opts=expenseSettlementOptions(e);if(opts.length)openSettlementPayment({...opts[0],maxAmount:opts[0].amount,expenseId:e.id,description:e.description});else toast("Esta cuenta no tiene saldo pendiente.")}if(b.dataset.detailAction==="receipt"){if(attachments.length)openAttachmentViewer(attachments,0);else toast("No hay comprobantes.")}});
+  openSheet("#expenseDetailSheet","full");
+}
+$("#expenseDetailEditBtn")?.addEventListener("click",()=>{const e=expenses.find(x=>x.id===$("#expenseDetailEditBtn").dataset.id);if(e)openExpense(e)});
+$(".expenseDetailCancel")?.addEventListener("click",closeSheets);
+
+function renderTodayActions(){
+  const pending=pendingMonthBills(),plan=settlementPlan(),next=nextRecurringSummary(),items=[];
+  if(pending.length)items.push({icon:"▤",title:`${pending.length} cuenta${pending.length===1?"":"s"} pendiente${pending.length===1?"":"s"}`,sub:`${money(pending.reduce((s,e)=>s+Number(e.amount||0),0))} por pagar`,action:"bills",cta:"Ver cuentas"});
+  if(plan.length)items.push({icon:"⇄",title:`${plan.length} saldo${plan.length===1?"":"s"} por resolver`,sub:`${money(plan.reduce((s,p)=>s+Number(p.amount||0),0))} pendiente`,action:"balances",cta:"Ver saldos"});
+  if(next.title!=="—")items.push({icon:"↻",title:`Próximo recurrente: ${next.title}`,sub:next.sub,action:"month",cta:"Ver calendario"});
+  $("#todayActionList").innerHTML=items.length?items.map(i=>`<button data-today="${i.action}"><span>${i.icon}</span><div><b>${esc(i.title)}</b><small>${esc(i.sub)}</small></div><em>${i.cta} →</em></button>`).join(""):`<div class="empty"><b>Todo al día ✓</b>No hay acciones urgentes.</div>`;
+  $$("#todayActionList [data-today]").forEach(b=>b.onclick=()=>go(b.dataset.today));
+}
+$("#todayRefreshBtn")?.addEventListener("click",()=>{renderAll();toast("Actualizado ✓")});
+
+function openCreateChooser(){openSheet("#createChooserSheet","compact")}
+$(".createCancel")?.addEventListener("click",closeSheets);
+$$("[data-create-kind]").forEach(b=>b.onclick=()=>{const k=b.dataset.createKind;closeSheets();if(k==="paid"){openExpense();setTimeout(()=>setPaymentStatus("paid"),20)}if(k==="pending"){openExpense();setTimeout(()=>setPaymentStatus("pending"),20)}if(k==="payment"){const p=settlementPlan()[0];if(p)openSettlementPayment({...p,maxAmount:p.amount});else toast("No hay saldos pendientes.")}});
 function renderBills(){
-  const pending=pendingMonthBills().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-  const total=pending.reduce((s,e)=>s+Number(e.amount||0),0),next=nextRecurringSummary();
+  const all=monthExpenses().slice().sort((a,b)=>String(dueDateFor(a)).localeCompare(String(dueDateFor(b))));
+  const pending=all.filter(e=>e.paymentStatus==="pending"||!e.payerId),paid=all.filter(e=>e.paymentStatus!=="pending"&&e.payerId);
+  const dueSoon=pending.filter(e=>dueDateFor(e)),noDue=pending.filter(e=>!dueDateFor(e)),total=pending.reduce((s,e)=>s+Number(e.amount||0),0),next=nextRecurringSummary();
   if($("#billsPendingTotal"))$("#billsPendingTotal").textContent=money(total);
   if($("#billsPendingCount"))$("#billsPendingCount").textContent=String(pending.length);
   if($("#billsNextRecurring"))$("#billsNextRecurring").textContent=next.title==="—"?"—":`${next.title} · ${next.sub}`;
-  if($("#pendingBillsList"))$("#pendingBillsList").innerHTML=pending.length?pending.map(e=>`<button class="bill-card" data-bill="${esc(e.id)}"><span class="bill-icon">${categoryIcon(e.category)}</span><div><b>${esc(e.description)}</b><small>${esc(e.category||"Otros")} · ${esc(e.date)} · ${e.participantIds?.length||0} participante${(e.participantIds?.length||0)===1?"":"s"}</small></div><strong>${money(e.amount)}</strong><em>→</em></button>`).join(""):`<div class="empty"><b>Todo pagado ✓</b>No hay cuentas pendientes este mes.</div>`;
-  $$("#pendingBillsList [data-bill]").forEach(b=>b.onclick=()=>openExpense(expenses.find(e=>e.id===b.dataset.bill)));
+  const card=e=>`<button class="bill-card" data-bill="${esc(e.id)}"><span class="bill-icon">${categoryIcon(e.category)}</span><div><b>${esc(e.description)}</b><small>${statusPill(e)} ${esc(e.category||"Otros")} · ${esc(dueDateFor(e)||"Sin fecha")}</small></div><strong>${money(e.amount)}</strong><em>→</em></button>`;
+  if($("#billsDueSoon"))$("#billsDueSoon").innerHTML=dueSoon.length?dueSoon.map(card).join(""):`<div class="empty">Sin cuentas con fecha.</div>`;
+  if($("#billsNoDue"))$("#billsNoDue").innerHTML=noDue.length?noDue.map(card).join(""):`<div class="empty">Sin cuentas sin fecha.</div>`;
+  if($("#billsPaid"))$("#billsPaid").innerHTML=paid.length?paid.slice(0,8).map(card).join(""):`<div class="empty">Aún no hay cuentas pagadas.</div>`;
+  $$("[data-bill]").forEach(b=>b.onclick=()=>openExpenseDetail(expenses.find(e=>e.id===b.dataset.bill)));
 }
 function openPendingBill(){
   openExpense();
@@ -275,6 +321,15 @@ function openPendingBill(){
 $("#newPendingBillBtn")?.addEventListener("click",openPendingBill);
 $("#qaPendingBill")?.addEventListener("click",()=>{closeSheets();openPendingBill()});
 $("#balancesRecordPayment")?.addEventListener("click",()=>{const p=settlementPlan()[0];if(p)openSettlementPayment({...p,maxAmount:p.amount});else toast("No hay saldos pendientes.")});
+
+function renderMonthCloseCenter(){
+  const ex=monthExpenses(),pending=pendingMonthBills(),plan=settlementPlan(),missing=ex.filter(e=>!expenseAttachments(e).length),paid=settlements.filter(s=>s.month===activeMonth&&s.status==="paid"),closed=!!closings[activeMonth];
+  if($("#monthCloseMetrics"))$("#monthCloseMetrics").innerHTML=`<div><span>Gastos</span><b>${money(totalsFor(ex.filter(e=>e.paymentStatus!=="pending"&&e.payerId)))}</b></div><div><span>Cuentas pendientes</span><b>${pending.length}</b></div><div><span>Pagos entre personas</span><b>${money(paid.reduce((s,x)=>s+Number(x.amount||0),0))}</b></div><div><span>Saldos finales</span><b>${plan.length}</b></div><div><span>Sin comprobante</span><b>${missing.length}</b></div><div><span>Estado</span><b>${closed?"Cerrado":"Abierto"}</b></div>`;
+  $("#closeMonthPrimaryBtn")?.classList.toggle("hidden",closed);$("#monthReopenBtn")?.classList.toggle("hidden",!closed);
+}
+$("#monthClosePdfBtn")?.addEventListener("click",()=>openReport());
+$("#closeMonthPrimaryBtn")?.addEventListener("click",()=>$("#closeMonthBtn")?.click());
+$("#monthReopenBtn")?.addEventListener("click",()=>$("#reopenMonthBtn")?.click());
 function renderMembers(paid,share,balances){
   $("#membersList").innerHTML=members.map(m=>`<button class="member-row clickable-member family-hub-member" data-person="${esc(m.id)}">${memberAvatar(m,"lg")}<div><b>${esc(m.name)}</b><small>${m.authUid===me?.uid?"Tu perfil · ":""}${esc(m.email||"Sin email")}</small><em>${balances[m.id]>0.005?"+"+money(balances[m.id]):balances[m.id]<-.005?"−"+money(-balances[m.id]):"Saldado"}</em></div><span class="role-pill">${m.role==="owner"?"Owner":"Member"}</span></button>`).join("");
   $$(".clickable-member").forEach(b=>b.onclick=()=>openMemberDetail(b.dataset.person));

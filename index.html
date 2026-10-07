@@ -122,7 +122,11 @@
         <div class="hero-aurora a"></div><div class="hero-aurora b"></div>
       </section>
 
-      <section class="home-attention">
+      <section class="today-action-center">
+  <div class="section-head"><div><span class="eyebrow">HOY</span><h2>Qué tengo que hacer</h2></div><button class="secondary small" id="todayRefreshBtn">Actualizar</button></div>
+  <div id="todayActionList" class="today-action-list"></div>
+</section>
+<section class="home-attention">
         <div class="premium-section-head"><div><span class="eyebrow">ATENCIÓN</span><h2>Lo importante ahora</h2></div></div>
         <div class="attention-grid">
           <button data-jump="bills"><span class="attention-icon peach">▤</span><div><b id="homePendingBills">0 cuentas pendientes</b><small id="homePendingBillsAmount">$0.00 por pagar</small></div><em>→</em></button>
@@ -202,7 +206,7 @@
     <div id="activityPage" class="page premium-subpage activity-premium">
       <div class="page-card">
         <div class="section-head"><div><span class="eyebrow">DINERO QUE YA SE MOVIÓ</span><h2>Gastos</h2></div><div class="section-actions"><button class="secondary small" id="activityVault">▧ Comprobantes</button><button class="primary small" id="activityAdd">＋ Agregar</button></div></div>
-        <div class="activity-chips" id="activityChips"><button class="active" data-activity-kind="all">Todos</button><button data-activity-kind="paid">Pagados</button><button data-activity-kind="receipt">Con comprobante</button></div>
+        <div class="status-legend"><span class="status-pill paid">Pagado</span><span class="status-pill pending">Pendiente</span><span class="status-pill partial">Parcial</span><span class="status-pill settled">Saldado</span><span class="status-pill covered">Cubierto</span></div><div class="activity-chips" id="activityChips"><button class="active" data-activity-kind="all">Todos</button><button data-activity-kind="paid">Pagados</button><button data-activity-kind="receipt">Con comprobante</button></div>
         <div class="filter-row">
           <input id="activitySearch" placeholder="Buscar gasto…">
           <select id="activityCategory"><option value="">Todas las categorías</option><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Suscripciones</option><option>Otros</option></select>
@@ -223,7 +227,11 @@
       </div>
       <div class="page-card">
         <div class="section-head"><div><span class="eyebrow">POR PAGAR</span><h2>Qué necesita atención</h2></div><button class="secondary small" data-jump="month">Ver calendario</button></div>
-        <div id="pendingBillsList" class="bills-list"></div>
+        <div class="bill-groups">
+<section><h3>Vence pronto</h3><div id="billsDueSoon" class="bills-list"></div></section>
+<section><h3>Sin fecha</h3><div id="billsNoDue" class="bills-list"></div></section>
+<section><h3>Pagadas este mes</h3><div id="billsPaid" class="bills-list"></div></section>
+</div>
       </div>
     </div>
 
@@ -240,7 +248,11 @@
       </div>
     </div>
 
-    <div id="monthPage" class="page premium-subpage month-premium">
+    <div id="monthPage" class="page premium-subpage month-premium"><section class="month-close-center">
+<div class="section-head"><div><span class="eyebrow">CIERRE MENSUAL</span><h2>Resumen del mes</h2></div><button class="primary small owner-only" id="closeMonthPrimaryBtn">Cerrar mes</button></div>
+<div id="monthCloseMetrics" class="month-close-metrics"></div>
+<div class="month-close-actions"><button class="secondary" id="monthClosePdfBtn">Generar PDF</button><button class="secondary owner-only" id="monthReopenBtn">Reabrir mes</button></div>
+</section>
       <div class="statement">
         <span class="eyebrow">ESTADO DE CUENTA</span><h2 id="statementMonth"></h2>
         <strong id="statementTotal">$0.00</strong><p id="statementMeta">0 gastos · Mes abierto</p>
@@ -361,6 +373,15 @@
 <div id="overlay" class="overlay hidden"></div>
 
 
+<aside id="createChooserSheet" class="sheet small-sheet hidden" data-detent="compact">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn createCancel">Cerrar</button><b>¿Qué quieres registrar?</b><span></span></div>
+  <div class="create-choice-grid">
+    <button type="button" data-create-kind="paid"><span>＋</span><div><b>Gasto pagado</b><small>Alguien ya lo pagó</small></div></button>
+    <button type="button" data-create-kind="pending"><span>▤</span><div><b>Cuenta pendiente</b><small>Nadie la pagó todavía</small></div></button>
+    <button type="button" data-create-kind="payment"><span>⇄</span><div><b>Registrar pago</b><small>Abono total o parcial</small></div></button>
+  </div>
+</aside>
 <aside id="quickActionsSheet" class="sheet action-sheet small-sheet hidden" data-detent="compact">
   <div class="sheet-handle"></div>
   <div class="sheet-head"><button class="text-btn quickActionsCancel">Cerrar</button><b>¿Qué quieres hacer?</b><span></span></div>
@@ -374,6 +395,11 @@
   </div>
 </aside>
 
+<aside id="expenseDetailSheet" class="sheet hidden" data-detent="full">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn expenseDetailCancel">Cerrar</button><b>Detalle</b><button class="text-btn accent" id="expenseDetailEditBtn">Editar</button></div>
+  <div id="expenseDetailContent" class="expense-detail-content"></div>
+</aside>
 <aside id="transactionActionsSheet" class="sheet action-sheet small-sheet hidden" data-detent="compact">
   <div class="sheet-handle"></div>
   <div class="sheet-head"><button class="text-btn transactionActionsCancel">Cerrar</button><b>Acciones del gasto</b><span></span></div>

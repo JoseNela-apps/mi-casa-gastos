@@ -1,18 +1,16 @@
-# Mi Casa V9.5.4 — Organized UX
+# Mi Casa V9.5.5 — Easy Use
 
-Reorganization applied on top of V9.5.3.
+UX improvements implemented on top of V9.5.4:
 
-Implemented:
-1. Inicio simplified and hero chart reduced.
-2. Navigation reorganized by purpose.
-3. Actividad renamed/reframed as Gastos.
-4. New Cuentas page for unpaid household bills.
-5. Saldos is the dedicated settlement center with Por cobrar / Por pagar / Pagado este mes.
-6. Predictions, Safe to Spend and Financial Health moved into a secondary collapsible Analysis area.
-7. Weekly recap is secondary/compact instead of dominating the home page.
-8. Mi Casa remains the family center for members, coverage, goals and automations.
-9. + Nuevo gasto now clearly offers Gasto pagado / Cuenta pendiente / Registrar pago.
-10. Inicio now leads with Atención: pending bills and unresolved balances.
+1. Home “Qué tengo que hacer hoy”.
+2. Unified create flow: paid expense / pending bill / payment.
+3. Universal visual statuses: Pagado / Pendiente / Parcial / Saldado / Cubierto.
+4. One clear detail view for each expense/account.
+5. Balance history with original debt, paid amount, and remaining amount.
+6. Bills grouped as due soon / no date / paid this month.
+7. Search messaging prepared for broader global search.
+8. Member detail enriched with own bills, payments and coverage.
+9. Less explanatory text on primary screens; more status-based hierarchy.
+10. Monthly Close Center with expenses, pending bills, interpersonal payments, final balances, missing receipts, PDF and close/reopen controls.
 
-Existing V9.5.3 payment syncing, professional PDFs, family coverage, receipt compression and UI repairs are preserved.
-No new Firebase collections or rules are required.
+Existing V9.5.4 behavior is preserved, including partial payments, global balance sync, family coverage, professional PDF reports, receipt compression and UI repair.

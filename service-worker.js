@@ -1,5 +1,5 @@
 /* Mi Casa · Gastos — V6 auto-update */
-const VERSION = "2026.10.07-954-organized-ux";
+const VERSION = "2026.10.07-955-easy-use";
 const CACHE = `mi-casa-${VERSION}`;
 const APP_SHELL = ["./","./index.html","./styles.css","./app.js","./manifest.json","./update-notifier.js","./icons/icon.svg"];
 
