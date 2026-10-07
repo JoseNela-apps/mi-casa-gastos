@@ -1,20 +1,21 @@
-# Mi Casa V9.5.2 — Payments + UI Repair
+# Mi Casa V9.5.3 — Saldos + Global Sync
 
-Base: V9.5.1 Professional PDF. V9.6 is NOT included.
+Base: V9.5.2 Payments + UI Repair. V9.6 is NOT included.
 
-New payment logic:
-- A person can make a partial payment toward an existing balance (example: Marita pays Alberto $300).
-- The recorded payment immediately reduces the remaining total in Saldos because it is stored in the existing settlements collection.
-- “Registrar pago” opens a payment form instead of forcing the entire balance to be marked paid.
-- A payment can be linked to one specific expense/invoice.
-- From an expense action, “Registrar pago de esta cuenta” lets you settle all or part of the responsible person's outstanding share for that exact bill.
-- Specific-bill payments also reduce the global balance.
-- Payment history identifies payments tied to a specific bill.
+Changes:
+- Saldos is now its own navigation tab on desktop and mobile.
+- Recorded partial payments update all current balances, not only “Quién paga a quién”.
+- Home “Te deben / Tú debes” uses current balance after payments.
+- Mi Casa member balances use current balance after payments.
+- Individual member profile balance uses current balance after payments.
+- Monthly people summary uses current balance after payments.
+- Global PDF now shows: paid expenses, responsibility, payments made, and current balance.
+- Global PDF’s summary is updated immediately after a payment is registered.
+- Individual PDF also shows payments made and current balance.
+- Fixed report language/member argument handling.
+- Existing partial-payment and invoice-payment logic remains intact.
 
-UI repair:
-- Only one sheet/window can be visible at a time.
-- Opening an expense from Calendar, Activity, Member Detail, Search, etc. automatically closes the previous sheet.
-- This fixes the overlapping right-side panels shown in the screenshot.
-- Body scroll is locked while a sheet is open.
+Example:
+If Marita originally owes Alberto $658.21 and records a $300 payment, all views and the global report now show Marita’s remaining balance as $358.21.
 
-No new Firebase collections or rule changes are required. Settlements reuse the existing collection and add optional expenseId/expenseDescription/note fields.
+No new Firebase collections or rules are required.
