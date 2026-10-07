@@ -21,7 +21,7 @@ let uiLang=localStorage.getItem("miCasaLanguage")||"es";
 const monthLabel=k=>{const [y,m]=k.split("-").map(Number);return new Intl.DateTimeFormat(uiLang==="en"?"en-US":"es-US",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(Date.UTC(y,m-1,1)))};
 const emailKey=e=>encodeURIComponent(String(e||"").trim().toLowerCase());
 const CATS=["Casa","Comida","Servicios","Teléfono","Transporte","Salud","Suscripciones","Otros"];
-let me=null,householdId=null,household=null,members=[],expenses=[],settlements=[],budgets={},recurrings=[],closings={},goals=[],automationRules=[],unsubs=[],activeMonth=nowMonth(),currentSplit="equal",attachmentCache=[],homeRange="month",currentView="home",activityPageSize=25,activityKind="all";
+let me=null,householdId=null,household=null,members=[],expenses=[],settlements=[],budgets={},recurrings=[],closings={},goals=[],automationRules=[],coverageRules={},unsubs=[],activeMonth=nowMonth(),currentSplit="equal",attachmentCache=[],homeRange="month",currentView="home",activityPageSize=25,activityKind="all";
 
 const isOwner=()=>!!(me&&household&&household.ownerId===me.uid);
 const myMember=()=>members.find(m=>m.authUid===me?.uid)||members.find(m=>m.id===me?.uid)||null;
@@ -74,13 +74,14 @@ async function startApp(){
   unsubs.push(onSnapshot(collection(db,"households",householdId,"monthlyClosings"),s=>{closings={};s.docs.forEach(d=>closings[d.id]=d.data());markDataReady("closings")},e=>streamFailed("closings",e)));
   unsubs.push(onSnapshot(collection(db,"households",householdId,"goals"),s=>{goals=s.docs.map(d=>({id:d.id,...d.data()}));markDataReady("goals")},e=>streamFailed("goals",e)));
   unsubs.push(onSnapshot(collection(db,"households",householdId,"automationRules"),s=>{automationRules=s.docs.map(d=>({id:d.id,...d.data()}));markDataReady("automations")},e=>streamFailed("automations",e)));
+  unsubs.push(onSnapshot(doc(db,"households",householdId,"settings","coverage"),s=>{coverageRules=s.exists()?(s.data().rules||{}):{};markDataReady("coverage")},e=>streamFailed("coverage",e)));
 }
 
 
 let renderTimer=null;
-let dataReady={members:false,expenses:false,settlements:false,budgets:false,recurring:false,closings:false,goals:false,automations:false};
+let dataReady={members:false,expenses:false,settlements:false,budgets:false,recurring:false,closings:false,goals:false,automations:false,coverage:false};
 function beginInitialLoad(){
-  dataReady={members:false,expenses:false,settlements:false,budgets:false,recurring:false,closings:false,goals:false,automations:false};
+  dataReady={members:false,expenses:false,settlements:false,budgets:false,recurring:false,closings:false,goals:false,automations:false,coverage:false};
   document.body.classList.add("app-loading");
 }
 function allDataReady(){return Object.values(dataReady).every(Boolean)}
@@ -99,23 +100,15 @@ function scheduleRender(){
 
 const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
 function monthExpenses(key=activeMonth){return expenses.filter(x=>monthKey(x.date)===key)}
+function paidMonthExpenses(key=activeMonth){return monthExpenses(key).filter(e=>e.paymentStatus!=="pending"&&e.payerId)}
+function pendingMonthBills(key=activeMonth){return monthExpenses(key).filter(e=>e.paymentStatus==="pending"||!e.payerId)}
+function pendingBillsTotal(key=activeMonth){return pendingMonthBills(key).reduce((s,e)=>s+Number(e.amount||0),0)}
 function prevMonthKey(key){const [y,m]=key.split("-").map(Number),d=new Date(Date.UTC(y,m-2,1));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}`}
-function expenseShares(e){
-  if(e.shares&&Object.keys(e.shares).length)return e.shares;
-  const ids=e.participantIds||[];if(!ids.length)return {};
-  const each=Number(e.amount||0)/ids.length;return Object.fromEntries(ids.map(id=>[id,each]));
-}
-function calc(key=activeMonth){
-  const paid={},share={};members.forEach(m=>{paid[m.id]=0;share[m.id]=0});
-  for(const e of monthExpenses(key)){paid[e.payerId]=(paid[e.payerId]||0)+Number(e.amount||0);for(const [id,v] of Object.entries(expenseShares(e)))share[id]=(share[id]||0)+Number(v||0)}
-  const balances={};members.forEach(m=>balances[m.id]=(paid[m.id]||0)-(share[m.id]||0));return{paid,share,balances};
-}
-function settlementPlan(){
-  const {balances}=calc(),paidThisMonth=settlements.filter(s=>s.month===activeMonth&&s.status==="paid");
-  const adjusted={...balances};paidThisMonth.forEach(s=>{adjusted[s.from]=(adjusted[s.from]||0)+Number(s.amount);adjusted[s.to]=(adjusted[s.to]||0)-Number(s.amount)});
-  let debt=Object.entries(adjusted).filter(([,v])=>v<-.005).map(([id,v])=>({id,a:-v})).sort((a,b)=>b.a-a.a),cred=Object.entries(adjusted).filter(([,v])=>v>.005).map(([id,v])=>({id,a:v})).sort((a,b)=>b.a-a.a),out=[],i=0,j=0;
-  while(i<debt.length&&j<cred.length){const a=Math.min(debt[i].a,cred[j].a);out.push({from:debt[i].id,to:cred[j].id,amount:a});debt[i].a-=a;cred[j].a-=a;if(debt[i].a<.005)i++;if(cred[j].a<.005)j++}return out;
-}
+function expenseShares(e){if(e.shares&&Object.keys(e.shares).length)return e.shares;const ids=e.participantIds||[];if(!ids.length)return {};const each=Number(e.amount||0)/ids.length;return Object.fromEntries(ids.map(id=>[id,each]))}
+function effectiveExpenseShares(e){const original=expenseShares(e),effective={};for(const [id,val] of Object.entries(original)){const coverer=e.useCoverage===true?(coverageRules[id]||id):id;const target=members.some(m=>m.id===coverer)?coverer:id;effective[target]=(effective[target]||0)+Number(val||0)}return effective}
+function coverageTextForExpense(e){if(e.useCoverage!==true)return "Sin cobertura familiar";const moves=[];Object.keys(expenseShares(e)).forEach(id=>{const c=coverageRules[id];if(c&&c!==id)moves.push(`${member(c).name} cubre a ${member(id).name}`)});return [...new Set(moves)].join(" · ")}
+function calc(key=activeMonth){const paid={},share={},originalShare={};members.forEach(m=>{paid[m.id]=0;share[m.id]=0;originalShare[m.id]=0});for(const e of paidMonthExpenses(key)){paid[e.payerId]=(paid[e.payerId]||0)+Number(e.amount||0);for(const [id,v] of Object.entries(expenseShares(e)))originalShare[id]=(originalShare[id]||0)+Number(v||0);for(const [id,v] of Object.entries(effectiveExpenseShares(e)))share[id]=(share[id]||0)+Number(v||0)}const balances={};members.forEach(m=>balances[m.id]=(paid[m.id]||0)-(share[m.id]||0));return{paid,share,originalShare,balances}}
+function settlementPlan(){const {balances}=calc(),paidThisMonth=settlements.filter(s=>s.month===activeMonth&&s.status==="paid");const adjusted={...balances};paidThisMonth.forEach(s=>{adjusted[s.from]=(adjusted[s.from]||0)+Number(s.amount);adjusted[s.to]=(adjusted[s.to]||0)-Number(s.amount)});let debt=Object.entries(adjusted).filter(([,v])=>v<-.005).map(([id,v])=>({id,a:-v})).sort((a,b)=>b.a-a.a),cred=Object.entries(adjusted).filter(([,v])=>v>.005).map(([id,v])=>({id,a:v})).sort((a,b)=>b.a-a.a),out=[],i=0,j=0;while(i<debt.length&&j<cred.length){const a=Math.min(debt[i].a,cred[j].a);out.push({from:debt[i].id,to:cred[j].id,amount:a});debt[i].a-=a;cred[j].a-=a;if(debt[i].a<.005)i++;if(cred[j].a<.005)j++}return out}
 function totalBudget(){return CATS.reduce((s,c)=>s+Number(budgets[`${activeMonth}_${c}`]?.limit||0),0)}
 function catTotals(){const o={};monthExpenses().forEach(e=>o[e.category]=(o[e.category]||0)+Number(e.amount||0));return o}
 
@@ -193,7 +186,7 @@ function renderAll(){
   const qb=$("#quickBudget");if(qb){const b=qb.querySelector("b"),s=qb.querySelector("small");if(!isOwner()){if(b)b.textContent="Mi perfil";if(s)s.textContent="Personalizar"}else{if(b)b.textContent="Presupuesto";if(s)s.textContent="Límites"}}
   const vc=$("#vaultCountHome");if(vc)vc.textContent=`${receiptFileCount()} ${receiptFileCount()===1?"archivo guardado":"archivos guardados"}`;
   renderNotifications();
-  renderIntelligence();renderGoals();renderSubscriptions();renderAutomations();
+  renderIntelligence();renderGoals();renderSubscriptions();renderAutomations();renderCoverageSummary();
   if(currentView==="vault")renderVault();
 }
 
@@ -251,6 +244,11 @@ function renderMembers(paid,share,balances){
   $$(".remove-member").forEach(b=>b.onclick=async()=>{const id=b.dataset.member,m=member(id);if(!confirm(`¿Quitar a ${m.name} del hogar? Sus gastos históricos no se borrarán.`))return;try{if(m.email&&!m.authUid){try{await deleteDoc(doc(db,"invites",emailKey(m.email)))}catch{}}await deleteDoc(doc(db,"households",householdId,"members",id));toast("Miembro eliminado")}catch(e){console.error(e);toast("No se pudo eliminar.")}});
   $("#monthPeople").innerHTML=members.map(m=>`<div class="settle-row"><div class="settle-person">${memberAvatar(m)}<div><b>${esc(m.name)}</b><small>Pagó ${money(paid[m.id]||0)}</small></div></div><span></span><div class="settle-person right"><div><b>${balances[m.id]>=0?"Recibe":"Debe"} ${money(Math.abs(balances[m.id]||0))}</b><small>Parte ${money(share[m.id]||0)}</small></div></div></div>`).join("");
 }
+function renderCoverageSummary(){const el=$("#coverageSummary");if(!el)return;const covered=members.filter(m=>coverageRules[m.id]&&coverageRules[m.id]!==m.id);el.innerHTML=covered.length?covered.map(m=>{const c=member(coverageRules[m.id]);return `<div class="coverage-chip-card">${memberAvatar(c)}<div><b>${esc(c.name)}</b><small>cubre a ${esc(m.name)}</small></div><span>→</span>${memberAvatar(m)}</div>`}).join(""):`<div class="empty"><b>Sin cobertura asignada</b>Cada persona responde por su propia parte.</div>`}
+function openCoverageManager(){if(!isOwner()){toast("Solo el Owner puede cambiar coberturas.");return}const opts=members.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join("");$("#coverageRows").innerHTML=members.map(m=>`<div class="coverage-row">${memberAvatar(m)}<div><b>${esc(m.name)}</b><small>Responsable económico</small></div><select data-covered="${esc(m.id)}"><option value="">Se cubre a sí mismo/a</option>${opts}</select></div>`).join("");$$("#coverageRows select").forEach(s=>{const v=coverageRules[s.dataset.covered]||"";s.value=v===s.dataset.covered?"":v});openSheet("#coverageSheet")}
+async function saveCoverage(){if(!isOwner())return;const rules={};$$("#coverageRows select").forEach(s=>{if(s.value&&s.value!==s.dataset.covered)rules[s.dataset.covered]=s.value});try{await setDoc(doc(db,"households",householdId,"settings","coverage"),{rules,updatedAt:serverTimestamp(),updatedBy:me.uid},{merge:true});closeSheets();toast("Cobertura familiar guardada ✓")}catch(e){console.error(e);toast("No se pudo guardar la cobertura.")}}
+$("#editCoverageBtn")?.addEventListener("click",openCoverageManager);$(".coverageCancel")?.addEventListener("click",closeSheets);$("#saveCoverageTop")?.addEventListener("click",saveCoverage);$("#saveCoverageBottom")?.addEventListener("click",saveCoverage);
+$("#applyCoverageExisting")?.addEventListener("click",async()=>{if(!isOwner())return;if(!confirm("¿Aplicar la cobertura familiar a todos los gastos existentes? Esto no cambia quién pagó cada gasto."))return;try{const candidates=expenses.filter(e=>e.useCoverage!==true);for(const e of candidates)await updateDoc(doc(db,"households",householdId,"expenses",e.id),{useCoverage:true,updatedAt:serverTimestamp()});closeSheets();toast(`Cobertura aplicada a ${candidates.length} gasto${candidates.length===1?"":"s"} ✓`)}catch(err){console.error(err);toast("No se pudo aplicar la cobertura.")}});
 function openMemberDetail(id){
   const m=member(id),{paid,share,balances}=calc(),allMine=monthExpenses().filter(e=>e.payerId===id||(e.participantIds||[]).includes(id)),mine=allMine.slice(0,7),canEdit=isOwner()||m.authUid===me?.uid;
   const personalCats={};allMine.forEach(e=>{const split=(e.split&&e.split[id]!=null)?Number(e.split[id]):((e.participantIds||[]).includes(id)?Number(e.amount||0)/Math.max(1,(e.participantIds||[]).length):0);personalCats[e.category]=(personalCats[e.category]||0)+Number(split||0)});
@@ -279,6 +277,11 @@ function updatePerPerson(){
   if(currentSplit==="equal")$("#perPerson").textContent=n?`${money(a/n)} c/u`:"Selecciona personas";
   else{const vals=$$(".split-input").reduce((s,i)=>s+(parseFloat(i.value)||0),0);$("#perPerson").textContent=currentSplit==="percent"?`${vals.toFixed(1)}% asignado`:`${money(vals)} asignado`}
 }
+let currentPaymentStatus="paid";
+function setPaymentStatus(status){currentPaymentStatus=status==="pending"?"pending":"paid";$$(".payment-status").forEach(b=>b.classList.toggle("active",b.dataset.paymentStatus===currentPaymentStatus));$("#expensePayerWrap").classList.toggle("hidden",currentPaymentStatus==="pending");$("#pendingBillHelp").classList.toggle("hidden",currentPaymentStatus!=="pending")}
+function renderExpenseCoveragePreview(){const el=$("#coverageExpensePreview");if(!el)return;if(!$("#expenseUseCoverage").checked){el.classList.add("hidden");return}const moves=selectedIds().map(id=>coverageRules[id]&&coverageRules[id]!==id?`${member(coverageRules[id]).name} cubre a ${member(id).name}`:"").filter(Boolean);if(!moves.length){el.classList.add("hidden");return}el.classList.remove("hidden");el.innerHTML=`<b>Responsabilidad final</b><small>${[...new Set(moves)].map(esc).join(" · ")}</small>`}
+$$(".payment-status").forEach(b=>b.addEventListener("click",()=>setPaymentStatus(b.dataset.paymentStatus)));
+$("#expenseUseCoverage")?.addEventListener("change",renderExpenseCoveragePreview);
 $("#expenseAmount").addEventListener("input",updatePerPerson);
 $$(".split-tab").forEach(b=>b.onclick=()=>{currentSplit=b.dataset.split;$$(".split-tab").forEach(x=>x.classList.toggle("active",x===b));$("#splitHelp").textContent=currentSplit==="equal"?"Se divide por igual.":currentSplit==="amount"?"Define el monto exacto por persona.":"Define el porcentaje por persona.";renderCustomSplitRows();updatePerPerson()});
 
@@ -295,9 +298,10 @@ function openExpense(e=null){
   if(!members.length){toast("Primero agrega miembros.");return}
   $("#expenseForm").reset();attachmentCache=e?.attachments?[...e.attachments]:(e?.receiptData?[{name:e.receiptName||"Comprobante",type:e.receiptType||"",data:e.receiptData}]:[]);$("#expenseId").value=e?.id||"";$("#expenseSheetTitle").textContent=e?"Editar gasto":"Nuevo gasto";$("#deleteExpense").classList.toggle("hidden",!e);
   $("#expenseDate").value=e?.date||today();$("#expenseAmount").value=e?.amount||"";$("#expenseDescription").value=e?.description||"";$("#expenseCategory").value=e?.category||"Casa";$("#expensePayer").value=e?.payerId||myMember()?.id||members[0]?.id;$("#expenseNotes").value=e?.notes||"";
+  setPaymentStatus(e?.paymentStatus||(e&&!e.payerId?"pending":"paid"));$("#expenseUseCoverage").checked=e ? e.useCoverage===true : true;
   currentSplit=e?.splitMode||"equal";$$(".split-tab").forEach(x=>x.classList.toggle("active",x.dataset.split===currentSplit));
   $$("#participantPicker .participant").forEach(b=>b.classList.toggle("selected",e?(e.participantIds||[]).includes(b.dataset.id):true));
-  renderCustomSplitRows(e?.splitValues||{});updatePerPerson();
+  renderCustomSplitRows(e?.splitValues||{});updatePerPerson();renderExpenseCoveragePreview();
   renderAttachmentPreview();
   openSheet("#expenseSheet");setTimeout(()=>$("#expenseAmount").focus(),100)
 }
@@ -431,7 +435,7 @@ $("#expenseReceipt").addEventListener("change",async e=>{
 $("#expenseForm").onsubmit=async e=>{
   e.preventDefault();const amount=parseFloat($("#expenseAmount").value),ids=selectedIds();if(!(amount>0)){toast("Ingresa un monto válido.");return}if(!ids.length){toast("Selecciona al menos una persona.");return}
   let shares={},splitValues={}; if(currentSplit==="equal"){ids.forEach(id=>shares[id]=amount/ids.length)}else{const vals={};$$(".split-input").forEach(i=>vals[i.dataset.id]=parseFloat(i.value)||0);splitValues=vals;if(currentSplit==="amount"){const sum=Object.values(vals).reduce((a,b)=>a+b,0);if(Math.abs(sum-amount)>.01){toast(`La división debe sumar ${money(amount)}.`);return}shares=vals}else{const sum=Object.values(vals).reduce((a,b)=>a+b,0);if(Math.abs(sum-100)>.05){toast("Los porcentajes deben sumar 100%.");return}ids.forEach(id=>shares[id]=amount*(vals[id]||0)/100)}}
-  const data={amount,description:$("#expenseDescription").value.trim(),date:$("#expenseDate").value,category:$("#expenseCategory").value,payerId:$("#expensePayer").value,participantIds:ids,splitMode:currentSplit,splitValues,shares,notes:$("#expenseNotes").value.trim(),attachments:attachmentCache,receiptData:null,receiptName:null,receiptType:null,updatedAt:serverTimestamp()};
+  const data={amount,description:$("#expenseDescription").value.trim(),date:$("#expenseDate").value,category:$("#expenseCategory").value,paymentStatus:currentPaymentStatus,payerId:currentPaymentStatus==="pending"?null:$("#expensePayer").value,useCoverage:$("#expenseUseCoverage").checked,participantIds:ids,splitMode:currentSplit,splitValues,shares,notes:$("#expenseNotes").value.trim(),attachments:attachmentCache,receiptData:null,receiptName:null,receiptType:null,updatedAt:serverTimestamp()};
   try{const id=$("#expenseId").value;if(id)await setDoc(doc(db,"households",householdId,"expenses",id),data,{merge:true});else await addDoc(collection(db,"households",householdId,"expenses"),{...data,createdBy:me.uid,createdAt:serverTimestamp()});closeSheets();toast(id?"Gasto actualizado ✓":"Gasto agregado ✓")}catch(err){console.error(err);toast("No se pudo guardar el gasto.")}
 };
 $("#deleteExpense").onclick=async()=>{const id=$("#expenseId").value;if(!id||!confirm("¿Eliminar este gasto?"))return;try{await deleteDoc(doc(db,"households",householdId,"expenses",id));closeSheets();toast("Gasto eliminado")}catch(e){toast("No tienes permiso para eliminarlo.")}};
@@ -546,7 +550,7 @@ function bindSwipeGesture(el,onLeft,onRight){if(!el||el.dataset.swipeReady)retur
 function bindExpenseGesture(el,e){bindSwipeGesture(el,()=>{openExpense(e);showLivePill("Editar gasto","✎")},()=>duplicateExpense(e))}
 function bindLongPress(el,callback){if(!el||el.dataset.longReady)return;el.dataset.longReady="1";let timer=null,sx=0,sy=0;const clear=()=>{clearTimeout(timer);timer=null};el.addEventListener("pointerdown",e=>{sx=e.clientX;sy=e.clientY;clear();timer=setTimeout(()=>{timer=null;callback?.();navigator.vibrate?.(12)},480)});el.addEventListener("pointermove",e=>{if(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10)clear()});el.addEventListener("pointerup",clear);el.addEventListener("pointercancel",clear)}
 function duplicateExpense(e){openExpense(e);$("#expenseId").value="";$("#expenseSheetTitle").textContent="Duplicar gasto";$("#deleteExpense").classList.add("hidden");showLivePill("Copia lista para guardar","＋")}
-function openTransactionActions(e){if(!e)return;$("#transactionActionsContent").innerHTML=`<button type="button" data-action="edit"><span class="qa-icon blue">✎</span><div><b>Editar</b><small>Cambiar los datos del gasto</small></div></button><button type="button" data-action="duplicate"><span class="qa-icon mint">＋</span><div><b>Duplicar</b><small>Crear uno similar</small></div></button>${expenseAttachments(e).length?`<button type="button" data-action="receipt"><span class="qa-icon lilac">▧</span><div><b>Ver comprobante</b><small>${expenseAttachments(e).length} archivo(s)</small></div></button>`:""}`;$$("#transactionActionsContent [data-action]").forEach(b=>b.onclick=()=>{const a=b.dataset.action;closeSheets();if(a==="edit")openExpense(e);if(a==="duplicate")duplicateExpense(e);if(a==="receipt")openAttachmentViewer(expenseAttachments(e),0)});openSheet("#transactionActionsSheet","compact")}
+function openTransactionActions(e){if(!e)return;$("#transactionActionsContent").innerHTML=`<button type="button" data-action="edit"><span class="qa-icon blue">✎</span><div><b>Editar</b><small>Cambiar los datos del gasto</small></div></button><button type="button" data-action="duplicate"><span class="qa-icon mint">＋</span><div><b>Duplicar</b><small>Crear uno similar</small></div></button><button type="button" data-action="coverage"><span class="qa-icon lilac">♡</span><div><b>${e.useCoverage===true?"Desactivar":"Aplicar"} cobertura familiar</b><small>Recalcular responsabilidad familiar</small></div></button>${expenseAttachments(e).length?`<button type="button" data-action="receipt"><span class="qa-icon lilac">▧</span><div><b>Ver comprobante</b><small>${expenseAttachments(e).length} archivo(s)</small></div></button>`:""}`;$$("#transactionActionsContent [data-action]").forEach(b=>b.onclick=async()=>{const a=b.dataset.action;if(a==="coverage"){try{const next=e.useCoverage!==true;await updateDoc(doc(db,"households",householdId,"expenses",e.id),{useCoverage:next,updatedAt:serverTimestamp()});closeSheets();toast(next?"Cobertura familiar aplicada ✓":"Cobertura desactivada ✓")}catch(err){console.error(err);toast("No se pudo actualizar la cobertura.")}return}closeSheets();if(a==="edit")openExpense(e);if(a==="duplicate")duplicateExpense(e);if(a==="receipt")openAttachmentViewer(expenseAttachments(e),0)});openSheet("#transactionActionsSheet","compact")}
 function openQuickActions(){openSheet("#quickActionsSheet","compact")}
 $("#qaExpense")?.addEventListener("click",()=>{closeSheets();openExpense()});
 $("#qaSettle")?.addEventListener("click",()=>{closeSheets();go("balances")});
