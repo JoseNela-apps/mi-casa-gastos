@@ -172,7 +172,7 @@ function renderAll(){
   $$(".mark-paid").forEach(b=>b.onclick=()=>markSettlement(Number(b.dataset.index)));
   $$("#settlementList .premium-settle-card").forEach((el,i)=>bindSwipeGesture(el,null,()=>markSettlement(i)));
   const hist=settlements.filter(s=>s.month===activeMonth&&s.status==="paid").sort((a,b)=>(b.paidAt?.seconds||0)-(a.paidAt?.seconds||0));
-  $("#settlementHistory").innerHTML=hist.length?hist.map(s=>`<div class="feed-item"><div class="cat-icon">✓</div><div class="feed-copy"><b>${esc(member(s.from).name)} → ${esc(member(s.to).name)}</b><small>${esc(s.method||"Pago")} · registrado</small></div><div class="feed-amount"><b>${money(s.amount)}</b><small>Pagado</small></div></div>`).join(""):`<div class="empty"><b>Sin pagos registrados</b>Los pagos marcados como pagados aparecerán aquí.</div>`;
+  $("#settlementHistory").innerHTML=hist.length?hist.map(s=>`<div class="feed-item"><div class="cat-icon">✓</div><div class="feed-copy"><b>${esc(member(s.from).name)} → ${esc(member(s.to).name)}</b><small>${esc(s.method||"Pago")}${s.expenseDescription?` · ${esc(s.expenseDescription)}`:""} · registrado</small></div><div class="feed-amount"><b>${money(s.amount)}</b><small>${s.expenseId?"Cuenta saldada":"Pago"}</small></div></div>`).join(""):`<div class="empty"><b>Sin pagos registrados</b>Los pagos registrados aparecerán aquí.</div>`;
 
   renderCategories(homeTotal,homeEx);
   renderActivity();
@@ -258,8 +258,47 @@ function openMemberDetail(id){
   $("#memberDetailContent").querySelectorAll(".feed-item[data-id]").forEach(el=>{const e=expenses.find(x=>x.id===el.dataset.id);el.onclick=()=>openExpense(e);bindExpenseGesture(el,e)});
   openSheet("#memberDetailSheet");
 }
-function settleHTML(p,withButton=false,i=0){const from=member(p.from),to=member(p.to);return `<div class="premium-settle-card"><div class="settle-face">${memberAvatar(from,"lg")}<b>${esc(from.name)}</b><small>paga</small></div><div class="settle-flow"><span>→</span><strong>${money(p.amount)}</strong>${withButton?`<button class="secondary mini mark-paid" data-index="${i}">Marcar pagado</button>`:""}</div><div class="settle-face">${memberAvatar(to,"lg")}<b>${esc(to.name)}</b><small>recibe</small></div></div>`}
-async function markSettlement(i){const p=settlementPlan()[i];if(!p)return;try{await addDoc(collection(db,"households",householdId,"settlements"),{...p,month:activeMonth,status:"paid",method:"Transferencia",createdBy:me.uid,paidAt:serverTimestamp()});toast("Pago registrado ✓")}catch(e){console.error(e);toast("No se pudo registrar el pago.")}}
+function settleHTML(p,withButton=false,i=0){const from=member(p.from),to=member(p.to);return `<div class="premium-settle-card"><div class="settle-face">${memberAvatar(from,"lg")}<b>${esc(from.name)}</b><small>paga</small></div><div class="settle-flow"><span>→</span><strong>${money(p.amount)}</strong>${withButton?`<button class="secondary mini mark-paid" data-index="${i}">Registrar pago</button>`:""}</div><div class="settle-face">${memberAvatar(to,"lg")}<b>${esc(to.name)}</b><small>recibe</small></div></div>`}
+function memberOptions(selected=""){return members.map(m=>`<option value="${esc(m.id)}" ${m.id===selected?"selected":""}>${esc(m.name)}</option>`).join("")}
+function expenseSettlementOptions(e){
+  if(!e?.payerId)return [];
+  const shares=effectiveExpenseShares(e),to=e.payerId;
+  return Object.entries(shares).filter(([id,a])=>id!==to&&Number(a)>0).map(([from,a])=>{
+    const already=settlements.filter(s=>s.status==="paid"&&s.expenseId===e.id&&s.from===from&&s.to===to).reduce((sum,s)=>sum+Number(s.amount||0),0);
+    return {from,to,amount:Math.max(0,Number(a)-already)};
+  }).filter(x=>x.amount>.005);
+}
+function openSettlementPayment(opts={}){
+  const from=opts.from||members[0]?.id||"",to=opts.to||members[1]?.id||"";
+  $("#settlementPaymentTitle").textContent=opts.expenseId?"Saldar esta cuenta":"Registrar pago";
+  $("#settlementExpenseId").value=opts.expenseId||"";
+  if(opts.expenseId){const e=expenses.find(x=>x.id===opts.expenseId),available=expenseSettlementOptions(e);$("#settlementFrom").innerHTML=available.map(x=>`<option value="${esc(x.from)}">${esc(member(x.from).name)} · ${money(x.amount)}</option>`).join("");$("#settlementTo").innerHTML=memberOptions(to)}else{$("#settlementFrom").innerHTML=memberOptions(from);$("#settlementTo").innerHTML=memberOptions(to)}
+  $("#settlementFrom").value=from;$("#settlementTo").value=to;
+  $("#settlementAmount").value=Number(opts.amount||0).toFixed(2);
+  $("#settlementAmount").dataset.max=String(Number(opts.maxAmount||opts.amount||0));
+  $("#settlementAmountHelp").textContent=opts.maxAmount?`Máximo pendiente: ${money(opts.maxAmount)}`:"Puedes registrar un pago parcial.";
+  $("#settlementMethod").value="Transferencia";$("#settlementNote").value="";
+  $("#settlementPaymentContext").innerHTML=opts.expenseId?`<b>${esc(opts.description||"Cuenta")}</b><small>Este pago se aplicará específicamente a esta cuenta y también reducirá el saldo total.</small>`:`<b>${esc(member(from).name)} → ${esc(member(to).name)}</b><small>Puedes registrar el total o solamente una parte.</small>`;
+  openSheet("#settlementPaymentSheet","medium");
+}
+function markSettlement(i){const p=settlementPlan()[i];if(!p)return;openSettlementPayment({...p,maxAmount:p.amount})}
+async function saveSettlementPayment(){
+  const from=$("#settlementFrom").value,to=$("#settlementTo").value,amount=Number($("#settlementAmount").value||0),max=Number($("#settlementAmount").dataset.max||0),expenseId=$("#settlementExpenseId").value||null;
+  if(!from||!to||from===to){toast("Selecciona dos personas diferentes.");return}
+  if(!(amount>0)){toast("Ingresa un monto válido.");return}
+  if(max>0&&amount>max+.005){toast(`El máximo pendiente es ${money(max)}.`);return}
+  try{
+    const data={from,to,amount,month:activeMonth,status:"paid",method:$("#settlementMethod").value||"Transferencia",note:$("#settlementNote").value.trim(),createdBy:me.uid,paidAt:serverTimestamp()};
+    if(expenseId){data.expenseId=expenseId;const e=expenses.find(x=>x.id===expenseId);data.expenseDescription=e?.description||""}
+    await addDoc(collection(db,"households",householdId,"settlements"),data);
+    closeSheets();toast(expenseId?"Cuenta actualizada ✓":"Pago registrado ✓");
+  }catch(e){console.error(e);toast("No se pudo registrar el pago.")}
+}
+$("#settlementPaymentForm")?.addEventListener("submit",e=>{e.preventDefault();saveSettlementPayment()});
+$("#saveSettlementPaymentTop")?.addEventListener("click",saveSettlementPayment);
+$("#settlementFrom")?.addEventListener("change",()=>{const expenseId=$("#settlementExpenseId").value;if(!expenseId)return;const e=expenses.find(x=>x.id===expenseId),opt=expenseSettlementOptions(e).find(x=>x.from===$("#settlementFrom").value);if(opt){$("#settlementTo").value=opt.to;$("#settlementAmount").value=opt.amount.toFixed(2);$("#settlementAmount").dataset.max=String(opt.amount);$("#settlementAmountHelp").textContent=`Máximo pendiente: ${money(opt.amount)}`}});
+
+$(".paymentCancel")?.addEventListener("click",closeSheets);
 function feedHTML(e){const icons={Casa:"⌂",Comida:"●",Servicios:"⚡",Teléfono:"◫",Transporte:"◆",Salud:"✚",Suscripciones:"↻",Otros:"•"};return `<div class="feed-item" data-id="${esc(e.id)}"><div class="cat-icon ${categoryClass(e.category)}">${icons[e.category]||"•"}</div><div class="feed-copy"><b>${esc(e.description)}</b><small>${esc(member(e.payerId).name)} pagó · ${(e.participantIds||[]).length} participantes · ${esc(e.date)}</small></div><div class="feed-amount"><b>${money(e.amount)}</b><small>${esc(e.category||"Otros")}${((e.attachments&&e.attachments.length)||e.receiptName)?" · 📎":""}</small></div></div>`}
 
 function fillMemberControls(){
@@ -286,9 +325,9 @@ $("#expenseAmount").addEventListener("input",updatePerPerson);
 $$(".split-tab").forEach(b=>b.onclick=()=>{currentSplit=b.dataset.split;$$(".split-tab").forEach(x=>x.classList.toggle("active",x===b));$("#splitHelp").textContent=currentSplit==="equal"?"Se divide por igual.":currentSplit==="amount"?"Define el monto exacto por persona.":"Define el porcentaje por persona.";renderCustomSplitRows();updatePerPerson()});
 
 let activeSheet=null;
-function openSheet(id,detent=null){const sheet=$(id);if(!sheet)return;$("#overlay").classList.remove("hidden");sheet.classList.remove("hidden","sheet-full","sheet-compact");sheet.classList.add("sheet-visible");const d=detent||sheet.dataset.detent||"medium";sheet.dataset.currentDetent=d;sheet.classList.toggle("sheet-full",d==="full");sheet.classList.toggle("sheet-compact",d==="compact");sheet.style.transform="";activeSheet=sheet;document.body.classList.add("has-sheet")}
+function openSheet(id,detent=null){const sheet=$(id);if(!sheet)return;$$(".sheet").forEach(x=>{if(x!==sheet){x.classList.add("hidden");x.classList.remove("sheet-visible","sheet-full","sheet-compact","is-dragging");x.style.transform=""}});$("#overlay").classList.remove("hidden");sheet.classList.remove("hidden","sheet-full","sheet-compact");sheet.classList.add("sheet-visible");const d=detent||sheet.dataset.detent||"medium";sheet.dataset.currentDetent=d;sheet.classList.toggle("sheet-full",d==="full");sheet.classList.toggle("sheet-compact",d==="compact");sheet.style.transform="";activeSheet=sheet;document.body.classList.add("has-sheet")}
 function closeSheets(){$("#overlay").classList.add("hidden");$$(".sheet").forEach(x=>{x.classList.add("hidden");x.classList.remove("sheet-visible","sheet-full","sheet-compact","is-dragging");x.style.transform=""});activeSheet=null;document.body.classList.remove("has-sheet")}
-$("#overlay").onclick=closeSheets;$$(".sheetCancel,.memberCancel,.budgetCancel,.recurringCancel,.detailCancel,.quickActionsCancel,.transactionActionsCancel").forEach(b=>b.onclick=closeSheets);
+$("#overlay").onclick=closeSheets;$$(".sheetCancel,.memberCancel,.budgetCancel,.recurringCancel,.detailCancel,.quickActionsCancel,.transactionActionsCancel,.paymentCancel").forEach(b=>b.onclick=closeSheets);
 function initSheetDrag(){
   $$(".sheet .sheet-handle").forEach(handle=>{let startY=0,dy=0,dragging=false;handle.addEventListener("pointerdown",e=>{const s=handle.closest(".sheet");if(!s||s.classList.contains("hidden"))return;startY=e.clientY;dy=0;dragging=true;s.classList.add("is-dragging");handle.setPointerCapture?.(e.pointerId)});handle.addEventListener("pointermove",e=>{if(!dragging)return;const s=handle.closest(".sheet");dy=e.clientY-startY;if(dy>0)s.style.transform=`translateY(${Math.min(dy,260)}px)`;else if(dy<-45){s.classList.add("sheet-full");s.classList.remove("sheet-compact");s.dataset.currentDetent="full"}});handle.addEventListener("pointerup",()=>{if(!dragging)return;const s=handle.closest(".sheet");dragging=false;s.classList.remove("is-dragging");if(dy>110)closeSheets();else{s.style.transform=""}})});
 }
@@ -550,7 +589,7 @@ function bindSwipeGesture(el,onLeft,onRight){if(!el||el.dataset.swipeReady)retur
 function bindExpenseGesture(el,e){bindSwipeGesture(el,()=>{openExpense(e);showLivePill("Editar gasto","✎")},()=>duplicateExpense(e))}
 function bindLongPress(el,callback){if(!el||el.dataset.longReady)return;el.dataset.longReady="1";let timer=null,sx=0,sy=0;const clear=()=>{clearTimeout(timer);timer=null};el.addEventListener("pointerdown",e=>{sx=e.clientX;sy=e.clientY;clear();timer=setTimeout(()=>{timer=null;callback?.();navigator.vibrate?.(12)},480)});el.addEventListener("pointermove",e=>{if(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10)clear()});el.addEventListener("pointerup",clear);el.addEventListener("pointercancel",clear)}
 function duplicateExpense(e){openExpense(e);$("#expenseId").value="";$("#expenseSheetTitle").textContent="Duplicar gasto";$("#deleteExpense").classList.add("hidden");showLivePill("Copia lista para guardar","＋")}
-function openTransactionActions(e){if(!e)return;$("#transactionActionsContent").innerHTML=`<button type="button" data-action="edit"><span class="qa-icon blue">✎</span><div><b>Editar</b><small>Cambiar los datos del gasto</small></div></button><button type="button" data-action="duplicate"><span class="qa-icon mint">＋</span><div><b>Duplicar</b><small>Crear uno similar</small></div></button><button type="button" data-action="coverage"><span class="qa-icon lilac">♡</span><div><b>${e.useCoverage===true?"Desactivar":"Aplicar"} cobertura familiar</b><small>Recalcular responsabilidad familiar</small></div></button>${expenseAttachments(e).length?`<button type="button" data-action="receipt"><span class="qa-icon lilac">▧</span><div><b>Ver comprobante</b><small>${expenseAttachments(e).length} archivo(s)</small></div></button>`:""}`;$$("#transactionActionsContent [data-action]").forEach(b=>b.onclick=async()=>{const a=b.dataset.action;if(a==="coverage"){try{const next=e.useCoverage!==true;await updateDoc(doc(db,"households",householdId,"expenses",e.id),{useCoverage:next,updatedAt:serverTimestamp()});closeSheets();toast(next?"Cobertura familiar aplicada ✓":"Cobertura desactivada ✓")}catch(err){console.error(err);toast("No se pudo actualizar la cobertura.")}return}closeSheets();if(a==="edit")openExpense(e);if(a==="duplicate")duplicateExpense(e);if(a==="receipt")openAttachmentViewer(expenseAttachments(e),0)});openSheet("#transactionActionsSheet","compact")}
+function openTransactionActions(e){if(!e)return;$("#transactionActionsContent").innerHTML=`<button type="button" data-action="edit"><span class="qa-icon blue">✎</span><div><b>Editar</b><small>Cambiar los datos del gasto</small></div></button><button type="button" data-action="duplicate"><span class="qa-icon mint">＋</span><div><b>Duplicar</b><small>Crear uno similar</small></div></button><button type="button" data-action="coverage"><span class="qa-icon lilac">♡</span><div><b>${e.useCoverage===true?"Desactivar":"Aplicar"} cobertura familiar</b><small>Recalcular responsabilidad familiar</small></div></button>${expenseSettlementOptions(e).length?`<button type="button" data-action="settle-expense"><span class="qa-icon mint">✓</span><div><b>Registrar pago de esta cuenta</b><small>Saldar total o parcialmente una participación específica</small></div></button>`:""}${expenseAttachments(e).length?`<button type="button" data-action="receipt"><span class="qa-icon lilac">▧</span><div><b>Ver comprobante</b><small>${expenseAttachments(e).length} archivo(s)</small></div></button>`:""}`;$$("#transactionActionsContent [data-action]").forEach(b=>b.onclick=async()=>{const a=b.dataset.action;if(a==="coverage"){try{const next=e.useCoverage!==true;await updateDoc(doc(db,"households",householdId,"expenses",e.id),{useCoverage:next,updatedAt:serverTimestamp()});closeSheets();toast(next?"Cobertura familiar aplicada ✓":"Cobertura desactivada ✓")}catch(err){console.error(err);toast("No se pudo actualizar la cobertura.")}return}if(a==="settle-expense"){const opts=expenseSettlementOptions(e);if(!opts.length){closeSheets();toast("Esta cuenta ya está saldada.");return}const first=opts[0];openSettlementPayment({...first,maxAmount:first.amount,expenseId:e.id,description:e.description});return}closeSheets();if(a==="edit")openExpense(e);if(a==="duplicate")duplicateExpense(e);if(a==="receipt")openAttachmentViewer(expenseAttachments(e),0)});openSheet("#transactionActionsSheet","compact")}
 function openQuickActions(){openSheet("#quickActionsSheet","compact")}
 $("#qaExpense")?.addEventListener("click",()=>{closeSheets();openExpense()});
 $("#qaSettle")?.addEventListener("click",()=>{closeSheets();go("balances")});

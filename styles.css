@@ -282,3 +282,8 @@ button{touch-action:manipulation}.page button,.nav,.bottom-nav button{user-selec
 @media(max-width:720px){.payment-status-tabs{grid-template-columns:1fr}.coverage-summary{grid-template-columns:1fr}.coverage-row{grid-template-columns:40px 1fr}.coverage-row select{grid-column:1/-1}.coverage-chip-card{grid-template-columns:36px 1fr 20px 36px}}
 
 #applyCoverageExisting{margin-top:9px}.pending-bill-item{border-left:3px solid rgba(180,122,47,.35)}
+
+/* V9.5.2 — payments + single-sheet UI */
+.payment-context{display:grid;gap:4px;background:linear-gradient(135deg,#eef7ff,#f5fbf8);border:1px solid #dce9f2;border-radius:17px;padding:14px 15px;margin:4px 0 18px}
+.payment-context b{font-size:14px}.payment-context small,.field-help{color:#758597;font-size:11px;line-height:1.4}
+body.has-sheet{overflow:hidden}.sheet.hidden{display:none!important}

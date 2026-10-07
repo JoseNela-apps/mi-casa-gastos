@@ -349,6 +349,34 @@
   <div id="transactionActionsContent" class="quick-actions-grid compact-actions"></div>
 </aside>
 
+<aside id="settlementPaymentSheet" class="sheet small-sheet hidden" data-detent="medium" aria-modal="true">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn paymentCancel" type="button">Cancelar</button><b id="settlementPaymentTitle">Registrar pago</b><button id="saveSettlementPaymentTop" class="text-btn accent" type="button">Guardar</button></div>
+  <form id="settlementPaymentForm">
+    <input id="settlementExpenseId" type="hidden">
+    <div id="settlementPaymentContext" class="payment-context"></div>
+    <label id="settlementFromWrap">Quién paga
+      <select id="settlementFrom"></select>
+    </label>
+    <label>A quién
+      <select id="settlementTo"></select>
+    </label>
+    <label>Monto
+      <input id="settlementAmount" inputmode="decimal" placeholder="0.00" required>
+      <small id="settlementAmountHelp" class="field-help"></small>
+    </label>
+    <label>Método
+      <select id="settlementMethod">
+        <option>Transferencia</option><option>Zelle</option><option>Efectivo</option><option>Cheque</option><option>Otro</option>
+      </select>
+    </label>
+    <label>Nota
+      <input id="settlementNote" maxlength="100" placeholder="Opcional">
+    </label>
+    <button class="primary wide" type="submit">Registrar pago</button>
+  </form>
+</aside>
+
 <aside id="expenseSheet" class="sheet hidden" data-detent="full" aria-modal="true">
   <div class="sheet-handle"></div>
   <div class="sheet-head"><button class="text-btn sheetCancel">Cancelar</button><b id="expenseSheetTitle">Nuevo gasto</b><button id="saveExpenseTop" class="text-btn accent">Guardar</button></div>
