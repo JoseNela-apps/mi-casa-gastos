@@ -1,20 +1,19 @@
-# Mi Casa V9.3 — Admin Fix
+# Mi Casa V9.4 — Bills & Family Coverage
 
-Correcciones principales:
-- Botón Editar para cada usuario en Administración.
-- Owner puede editar nombre y email de contacto/invitación.
-- Botón Avatar para editar foto, preset y color de cualquier miembro.
-- Restablecimiento de contraseña desde Admin para cuentas activas.
-- Estados Activo / Pendiente / Sin acceso.
-- Reenvío/preparación de invitación al guardar email.
-- Prevención de emails duplicados.
-- Limpieza de invitación pendiente al eliminar un miembro.
-- Corrección crítica de membresía: los member document IDs no tienen que ser iguales al Firebase Auth UID.
-- Reglas nuevas para `invites`.
-- Mantiene compresión automática de comprobantes a <= 200 KB y reportes globales/individuales.
+## Nuevo
+- Cuentas pendientes: puedes registrar luz, agua, basura, internet, etc. aunque nadie las haya pagado todavía.
+- Una cuenta pendiente NO acredita dinero a ninguna persona y NO entra en “quién paga a quién”.
+- Cuando alguien la paga, edita la cuenta, cambia a “Ya fue pagada” y selecciona quién pagó.
+- Cobertura familiar permanente: el Owner puede definir quién cubre económicamente a quién.
+- Ejemplo: Alberto cubre a Nela y Marianela; Juana puede cubrir a Timothy.
+- La app conserva la participación original, pero transfiere la responsabilidad final al coverer.
+- Cada gasto puede ignorar la cobertura familiar con un switch.
+- Dashboard muestra cuentas pendientes separadas.
+- Actividad identifica claramente “DEUDA PENDIENTE”.
+- PDF global incluye cuentas pendientes sin mezclarlas con saldos.
+- PDF individual indica cuando una persona está cubierta por otra.
+- Conserva Admin Fix V9.3, reportes, compresión de comprobantes <=200 KB y todas las funciones anteriores.
 
-IMPORTANTE:
-Publica FIREBASE_RULES_FINAL_V9.3.txt en Firestore Rules.
-
-Seguridad:
-La app NO guarda contraseñas en Firestore. Un Owner puede enviar restablecimiento. Cambiar directamente email/password de otra cuenta activa requiere Firebase Admin SDK en un backend seguro.
+## Firebase
+V9.4 agrega `/households/{householdId}/settings/coverage`.
+Publica `FIREBASE_RULES_FINAL_V9.4.txt`.

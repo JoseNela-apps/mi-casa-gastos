@@ -261,6 +261,11 @@
         <p class="muted">Toca un perfil para ver su balance, actividad y personalización.</p>
         <div id="membersList" class="members-list family-members-list"></div>
       </div>
+      <section class="page-card coverage-manager-card">
+        <div class="section-head"><div><span class="eyebrow">COBERTURA FAMILIAR</span><h2>Quién cubre a quién</h2></div><button class="primary small owner-only" id="editCoverageBtn">Administrar</button></div>
+        <p class="muted">La participación original se conserva, pero la responsabilidad final pasa a la persona que la cubre.</p>
+        <div id="coverageSummary" class="coverage-summary"></div>
+      </section>
       <section class="page-card family-goals-card"><div class="section-head"><div><span class="eyebrow">METAS</span><h2>Objetivos familiares</h2></div><button class="primary small owner-only" id="addGoalBtn">＋ Nueva meta</button></div><div id="goalsGrid" class="goals-grid"></div></section>
       <section class="page-card automation-center owner-only"><div class="section-head"><div><span class="eyebrow">AUTOMATIZACIONES</span><h2>Reglas inteligentes</h2></div><button class="secondary small" id="addAutomationBtn">＋ Regla</button></div><p class="muted">Alertas por presupuesto, gastos grandes, comprobantes faltantes y pagos próximos.</p><div id="automationList" class="automation-list"></div></section>
       <div class="family-hub-actions">
@@ -352,7 +357,15 @@
     <div class="amount-wrap"><span>$</span><input id="expenseAmount" inputmode="decimal" placeholder="0.00" required></div>
     <label>¿En qué se gastó?<input id="expenseDescription" required maxlength="80" placeholder="Ej. Internet, supermercado…"></label>
     <div class="form-grid"><label>Fecha<input id="expenseDate" type="date" required></label><label>Categoría<select id="expenseCategory"><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Suscripciones</option><option>Otros</option></select></label></div>
-    <label>Pagó<select id="expensePayer"></select></label>
+    <div class="payment-status-card">
+      <span class="eyebrow">ESTADO DE LA CUENTA</span>
+      <div class="payment-status-tabs">
+        <button type="button" class="payment-status active" data-payment-status="paid">✓ Ya fue pagada</button>
+        <button type="button" class="payment-status" data-payment-status="pending">◷ Nadie la pagó todavía</button>
+      </div>
+      <p id="pendingBillHelp" class="hidden">Se guardará como deuda pendiente. No afectará el balance de ninguna persona hasta que marques quién la pagó.</p>
+    </div>
+    <label id="expensePayerWrap">Pagó<select id="expensePayer"></select></label>
     <fieldset><legend>¿Para quién fue?</legend><div id="participantPicker" class="participant-picker"></div></fieldset>
     <div class="split-mode">
       <button type="button" class="split-tab active" data-split="equal">Igual</button>
@@ -360,6 +373,8 @@
       <button type="button" class="split-tab" data-split="percent">%</button>
     </div>
     <div id="splitBox" class="split-box"><div><b>División</b><small id="splitHelp">Se divide por igual.</small></div><span id="perPerson">$0.00 c/u</span></div>
+    <label class="coverage-toggle-row"><span><b>Aplicar cobertura familiar</b><small id="coverageExpenseHelp">Usa las reglas de quién cubre económicamente a quién.</small></span><input id="expenseUseCoverage" type="checkbox" checked></label>
+    <div id="coverageExpensePreview" class="coverage-expense-preview hidden"></div>
     <div id="customSplitRows" class="custom-split-rows hidden"></div>
     <label class="receipt-input">Comprobante <span class="optional">(las fotos se optimizan automáticamente a máximo 200 KB)</span><input id="expenseReceipt" type="file" accept="image/*,application/pdf" multiple></label>
     <div id="receiptPreview" class="receipt-placeholder"><span>▧</span><div><b>Sin comprobante</b><small>Puedes adjuntar varias fotos o PDFs al mismo gasto.</small></div></div>
@@ -462,6 +477,14 @@
   <div id="monthCloseContent"></div>
 </aside>
 
+
+<aside id="coverageSheet" class="sheet small-sheet hidden" data-detent="full">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn coverageCancel">Cancelar</button><b>Cobertura familiar</b><button class="text-btn accent" id="saveCoverageTop">Guardar</button></div>
+  <div class="coverage-sheet-intro"><span>♡</span><div><b>Asigna quién asume los gastos de otra persona</b><small>Ejemplo: Alberto cubre a Nela y Marianela. Juana cubre a Timothy.</small></div></div>
+  <div id="coverageRows" class="coverage-rows"></div>
+  <button class="primary wide" id="saveCoverageBottom" type="button">Guardar cobertura</button>
+</aside>
 
 <aside id="goalSheet" class="sheet small-sheet hidden" data-detent="medium"><div class="sheet-handle"></div><div class="sheet-head"><button class="text-btn goalCancel">Cancelar</button><b>Meta familiar</b><button class="text-btn accent" id="saveGoalTop">Guardar</button></div><form id="goalForm"><input id="goalId" type="hidden"><label>Nombre<input id="goalName" required maxlength="60" placeholder="Ej. Vacaciones"></label><div class="form-grid"><label>Meta $<input id="goalTarget" required inputmode="decimal" placeholder="1500"></label><label>Ahorrado $<input id="goalCurrent" inputmode="decimal" placeholder="0"></label></div><label>Fecha objetivo<input id="goalDate" type="date"></label><label>Icono<select id="goalIcon"><option value="✈">✈ Vacaciones</option><option value="⌂">⌂ Casa</option><option value="▣">▣ Tecnología</option><option value="★">★ Especial</option><option value="♡">♡ Familia</option></select></label><button class="primary wide" type="submit">Guardar meta</button><button class="danger wide hidden" type="button" id="deleteGoalBtn">Eliminar meta</button></form></aside>
 <aside id="automationSheet" class="sheet small-sheet hidden" data-detent="medium"><div class="sheet-handle"></div><div class="sheet-head"><button class="text-btn automationCancel">Cancelar</button><b>Regla inteligente</b><span></span></div><form id="automationForm"><label>Cuando…<select id="automationType"><option value="budget80">una categoría llegue al 80%</option><option value="largeExpense">un gasto supere un monto</option><option value="missingReceipt">un gasto grande no tenga comprobante</option><option value="recurringSoon">falte poco para un recurrente</option></select></label><label>Categoría<select id="automationCategory"><option value="">Cualquier categoría</option><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Suscripciones</option><option>Otros</option></select></label><label>Umbral / monto<input id="automationThreshold" inputmode="decimal" placeholder="100"></label><button class="primary wide" type="submit">Activar regla</button></form></aside>
