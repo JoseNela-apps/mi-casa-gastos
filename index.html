@@ -68,7 +68,8 @@
     <div class="side-brand"><span>⌂</span><div><small>MI CASA</small><b id="sideHouse">Finance</b></div></div>
     <nav class="v8-side-nav">
       <button class="nav active" data-view="home"><span>⌂</span><b>Inicio</b></button>
-      <button class="nav" data-view="activity"><span>≡</span><b>Actividad</b></button>
+      <button class="nav" data-view="activity"><span>≡</span><b>Gastos</b></button>
+      <button class="nav" data-view="bills"><span>▤</span><b>Cuentas</b></button>
       <button class="nav" data-view="balances"><span>⇄</span><b>Saldos</b></button>
       <button class="nav" data-view="month"><span>▦</span><b>Calendario</b></button>
       <button class="nav" data-view="vault"><span>▧</span><b>Comprobantes</b></button>
@@ -121,12 +122,25 @@
         <div class="hero-aurora a"></div><div class="hero-aurora b"></div>
       </section>
 
-      <section class="intelligence-grid">
-        <article class="forecast-card intelligent-card"><div class="smart-card-head"><span class="smart-icon">↗</span><div><small>PREDICCIÓN DEL MES</small><b id="forecastTitle">Calculando tu cierre…</b></div></div><strong id="forecastAmount">$0.00</strong><p id="forecastCopy">Mi Casa proyectará el cierre usando tu ritmo actual.</p><div class="forecast-track"><i id="forecastTrack"></i></div></article>
-        <article class="safe-spend-card intelligent-card"><div class="smart-card-head"><span class="smart-icon">◎</span><div><small>SAFE TO SPEND</small><b>Disponible sin salirte del plan</b></div></div><strong id="safeToSpend">—</strong><p id="safeSpendCopy">Configura un presupuesto global para activar esta guía.</p></article>
-        <article class="health-card intelligent-card"><div class="health-ring" id="healthRing"><span id="healthScore">—</span></div><div class="health-copy"><small>SALUD FINANCIERA DEL HOGAR</small><b id="healthLabel">Construyendo estado…</b><p id="healthCopy">Presupuesto · recurrentes · saldos · gasto variable</p></div></article>
+      <section class="home-attention">
+        <div class="premium-section-head"><div><span class="eyebrow">ATENCIÓN</span><h2>Lo importante ahora</h2></div></div>
+        <div class="attention-grid">
+          <button data-jump="bills"><span class="attention-icon peach">▤</span><div><b id="homePendingBills">0 cuentas pendientes</b><small id="homePendingBillsAmount">$0.00 por pagar</small></div><em>→</em></button>
+          <button data-jump="balances"><span class="attention-icon mint">⇄</span><div><b id="homeOpenBalances">Todo saldado</b><small id="homeOpenBalancesAmount">Sin transferencias pendientes</small></div><em>→</em></button>
+        </div>
       </section>
-      <section class="weekly-recap-card"><div class="weekly-recap-head"><div><span class="eyebrow">YOUR WEEK IN MI CASA</span><h2>Resumen semanal</h2></div><button type="button" id="openCompareBtn">Comparar ↗</button></div><div id="weeklyRecapGrid" class="weekly-recap-grid"></div></section>
+
+      <details class="home-analysis">
+        <summary><span><small>ANÁLISIS</small><b>Predicciones, presupuesto y resumen semanal</b></span><em>Ver análisis ↓</em></summary>
+        <div class="home-analysis-body">
+          <section class="intelligence-grid">
+            <article class="forecast-card intelligent-card"><div class="smart-card-head"><span class="smart-icon">↗</span><div><small>PREDICCIÓN DEL MES</small><b id="forecastTitle">Calculando tu cierre…</b></div></div><strong id="forecastAmount">$0.00</strong><p id="forecastCopy">Mi Casa proyectará el cierre usando tu ritmo actual.</p><div class="forecast-track"><i id="forecastTrack"></i></div></article>
+            <article class="safe-spend-card intelligent-card"><div class="smart-card-head"><span class="smart-icon">◎</span><div><small>SAFE TO SPEND</small><b>Disponible sin salirte del plan</b></div></div><strong id="safeToSpend">—</strong><p id="safeSpendCopy">Configura un presupuesto global para activar esta guía.</p></article>
+            <article class="health-card intelligent-card"><div class="health-ring" id="healthRing"><span id="healthScore">—</span></div><div class="health-copy"><small>SALUD FINANCIERA DEL HOGAR</small><b id="healthLabel">Construyendo estado…</b><p id="healthCopy">Presupuesto · recurrentes · saldos · gasto variable</p></div></article>
+          </section>
+          <section class="weekly-recap-card compact-weekly"><div class="weekly-recap-head"><div><span class="eyebrow">YOUR WEEK IN MI CASA</span><h2>Resumen semanal</h2></div><button type="button" id="openCompareBtn">Comparar ↗</button></div><div id="weeklyRecapGrid" class="weekly-recap-grid"></div></section>
+        </div>
+      </details>
 
       <section class="premium-actions">
         <button id="quickExpense"><span class="action-orb blue">＋</span><b>Gasto</b><small>Agregar</small></button>
@@ -169,13 +183,10 @@
         <strong>→</strong>
       </button>
 
-      <div class="premium-two-col">
-        <section class="premium-section balance-zone">
-          <div class="premium-section-head"><div><span class="eyebrow">FAMILY BALANCE</span><h2>Quién paga a quién</h2></div><button data-jump="balances">Ver todos</button></div>
-          <div id="settlementPreview" class="balance-cards"></div>
-        </section>
-
-      </div>
+      <section class="premium-section home-balance-shortcut">
+        <div class="premium-section-head"><div><span class="eyebrow">SALDOS</span><h2>Quién paga a quién</h2></div><button data-jump="balances">Abrir Saldos</button></div>
+        <div id="settlementPreview" class="balance-cards compact-balance-preview"></div>
+      </section>
 
       <section class="premium-section activity-zone">
         <div class="premium-section-head"><div><span class="eyebrow">RECENT</span><h2>Actividad reciente</h2></div><button data-jump="activity">Ver todo</button></div>
@@ -190,8 +201,8 @@
 
     <div id="activityPage" class="page premium-subpage activity-premium">
       <div class="page-card">
-        <div class="section-head"><div><span class="eyebrow">MOVIMIENTOS</span><h2>Actividad</h2></div><div class="section-actions"><button class="secondary small" id="activityVault">▧ Comprobantes</button><button class="primary small" id="activityAdd">＋ Agregar</button></div></div>
-        <div class="activity-chips" id="activityChips"><button class="active" data-activity-kind="all">Todos</button><button data-activity-kind="expense">Gastos</button><button data-activity-kind="receipt">Con comprobante</button></div>
+        <div class="section-head"><div><span class="eyebrow">DINERO QUE YA SE MOVIÓ</span><h2>Gastos</h2></div><div class="section-actions"><button class="secondary small" id="activityVault">▧ Comprobantes</button><button class="primary small" id="activityAdd">＋ Agregar</button></div></div>
+        <div class="activity-chips" id="activityChips"><button class="active" data-activity-kind="all">Todos</button><button data-activity-kind="paid">Pagados</button><button data-activity-kind="receipt">Con comprobante</button></div>
         <div class="filter-row">
           <input id="activitySearch" placeholder="Buscar gasto…">
           <select id="activityCategory"><option value="">Todas las categorías</option><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Suscripciones</option><option>Otros</option></select>
@@ -200,10 +211,27 @@
       </div>
     </div>
 
+    <div id="billsPage" class="page premium-subpage bills-premium">
+      <section class="bills-hero">
+        <div><span class="eyebrow">OBLIGACIONES DEL HOGAR</span><h2>Cuentas pendientes</h2><p>Luz, agua, basura, teléfono y cualquier cuenta que todavía nadie ha pagado.</p></div>
+        <button class="primary" id="newPendingBillBtn">＋ Nueva cuenta</button>
+      </section>
+      <div class="bills-summary-grid">
+        <div><span>Total pendiente</span><b id="billsPendingTotal">$0.00</b></div>
+        <div><span>Cuentas abiertas</span><b id="billsPendingCount">0</b></div>
+        <div><span>Próximo recurrente</span><b id="billsNextRecurring">—</b></div>
+      </div>
+      <div class="page-card">
+        <div class="section-head"><div><span class="eyebrow">POR PAGAR</span><h2>Qué necesita atención</h2></div><button class="secondary small" data-jump="month">Ver calendario</button></div>
+        <div id="pendingBillsList" class="bills-list"></div>
+      </div>
+    </div>
+
     <div id="balancesPage" class="page premium-subpage balances-premium">
       <div class="page-card">
-        <div class="section-head"><div><span class="eyebrow">BALANCES</span><h2>Deudas simplificadas</h2></div></div>
-        <p class="muted">Reducimos los cruces para dejar la menor cantidad posible de transferencias.</p>
+        <div class="section-head"><div><span class="eyebrow">LIQUIDACIÓN FAMILIAR</span><h2>Saldos</h2></div><button class="primary small" id="balancesRecordPayment">＋ Registrar pago</button></div>
+        <div class="balance-summary-grid"><div><span>Por cobrar</span><b id="balancesReceivable">$0.00</b></div><div><span>Por pagar</span><b id="balancesPayable">$0.00</b></div><div><span>Pagado este mes</span><b id="balancesPaidMonth">$0.00</b></div></div>
+        <p class="muted">Mostramos la menor cantidad posible de transferencias y descontamos automáticamente cada pago registrado.</p>
         <div id="settlementList" class="settlement-list"></div>
       </div>
       <div class="page-card">
@@ -292,10 +320,10 @@
 
   <nav class="bottom-nav v8-dock" aria-label="Navegación principal">
     <button class="active" data-view="home"><span>⌂</span><small>Inicio</small></button>
-    <button data-view="activity"><span>≡</span><small>Actividad</small></button>
+    <button data-view="activity"><span>≡</span><small>Gastos</small></button>
     <button data-view="balances"><span>⇄</span><small>Saldos</small></button>
     <button id="mobileAdd" class="add" aria-label="Acciones rápidas"><span>＋</span></button>
-    <button data-view="month"><span>▦</span><small>Calendario</small></button>
+    <button data-view="bills"><span>▤</span><small>Cuentas</small></button>
     <button data-view="family"><span>◎</span><small>Mi Casa</small></button>
   </nav>
 </section>
@@ -337,8 +365,9 @@
   <div class="sheet-handle"></div>
   <div class="sheet-head"><button class="text-btn quickActionsCancel">Cerrar</button><b>¿Qué quieres hacer?</b><span></span></div>
   <div class="quick-actions-grid">
-    <button type="button" id="qaExpense"><span class="qa-icon blue">＋</span><div><b>Nuevo gasto</b><small>Registra una compra o factura</small></div></button>
-    <button type="button" id="qaSettle"><span class="qa-icon mint">⇄</span><div><b>Registrar pago</b><small>Revisa saldos pendientes</small></div></button>
+    <button type="button" id="qaExpense"><span class="qa-icon blue">＋</span><div><b>Gasto pagado</b><small>Algo que alguien ya pagó</small></div></button>
+    <button type="button" id="qaPendingBill"><span class="qa-icon peach">▤</span><div><b>Cuenta pendiente</b><small>Nadie la pagó todavía</small></div></button>
+    <button type="button" id="qaSettle"><span class="qa-icon mint">⇄</span><div><b>Registrar pago</b><small>Abono total o parcial entre personas</small></div></button>
     <button type="button" id="qaReceipt"><span class="qa-icon lilac">▧</span><div><b>Subir comprobante</b><small>Adjúntalo a un nuevo gasto</small></div></button>
     <button type="button" id="qaRecurring" class="owner-only"><span class="qa-icon peach">↻</span><div><b>Pago recurrente</b><small>Renta, teléfono, servicios…</small></div></button>
     <button type="button" id="qaCloseMonth" class="owner-only"><span class="qa-icon dark">✓</span><div><b>Cerrar mes</b><small>Revisa el resumen antes de cerrar</small></div></button>

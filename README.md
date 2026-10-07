@@ -1,21 +1,18 @@
-# Mi Casa V9.5.3 — Saldos + Global Sync
+# Mi Casa V9.5.4 — Organized UX
 
-Base: V9.5.2 Payments + UI Repair. V9.6 is NOT included.
+Reorganization applied on top of V9.5.3.
 
-Changes:
-- Saldos is now its own navigation tab on desktop and mobile.
-- Recorded partial payments update all current balances, not only “Quién paga a quién”.
-- Home “Te deben / Tú debes” uses current balance after payments.
-- Mi Casa member balances use current balance after payments.
-- Individual member profile balance uses current balance after payments.
-- Monthly people summary uses current balance after payments.
-- Global PDF now shows: paid expenses, responsibility, payments made, and current balance.
-- Global PDF’s summary is updated immediately after a payment is registered.
-- Individual PDF also shows payments made and current balance.
-- Fixed report language/member argument handling.
-- Existing partial-payment and invoice-payment logic remains intact.
+Implemented:
+1. Inicio simplified and hero chart reduced.
+2. Navigation reorganized by purpose.
+3. Actividad renamed/reframed as Gastos.
+4. New Cuentas page for unpaid household bills.
+5. Saldos is the dedicated settlement center with Por cobrar / Por pagar / Pagado este mes.
+6. Predictions, Safe to Spend and Financial Health moved into a secondary collapsible Analysis area.
+7. Weekly recap is secondary/compact instead of dominating the home page.
+8. Mi Casa remains the family center for members, coverage, goals and automations.
+9. + Nuevo gasto now clearly offers Gasto pagado / Cuenta pendiente / Registrar pago.
+10. Inicio now leads with Atención: pending bills and unresolved balances.
 
-Example:
-If Marita originally owes Alberto $658.21 and records a $300 payment, all views and the global report now show Marita’s remaining balance as $358.21.
-
+Existing V9.5.3 payment syncing, professional PDFs, family coverage, receipt compression and UI repairs are preserved.
 No new Firebase collections or rules are required.

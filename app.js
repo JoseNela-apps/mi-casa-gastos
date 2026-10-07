@@ -180,7 +180,17 @@ function renderAll(){
   setupSnapCarousel($("#peopleStrip"));
   $$(".person-card").forEach(b=>b.onclick=()=>openMemberDetail(b.dataset.person));
 
-  const plan=settlementPlan();$("#settlementPreview").innerHTML=plan.length?plan.slice(0,3).map(settleHTML).join(""):`<div class="empty"><b>Todo saldado ✓</b>No hay pagos pendientes.</div>`;
+  const plan=settlementPlan();$("#settlementPreview").innerHTML=plan.length?plan.slice(0,2).map(settleHTML).join(""):`<div class="empty"><b>Todo saldado ✓</b>No hay pagos pendientes.</div>`;
+  const pendingBillsNow=pendingMonthBills(),pendingBillsAmount=pendingBillsNow.reduce((s,e)=>s+Number(e.amount||0),0);
+  if($("#homePendingBills"))$("#homePendingBills").textContent=`${pendingBillsNow.length} cuenta${pendingBillsNow.length===1?"":"s"} pendiente${pendingBillsNow.length===1?"":"s"}`;
+  if($("#homePendingBillsAmount"))$("#homePendingBillsAmount").textContent=`${money(pendingBillsAmount)} por pagar`;
+  if($("#homeOpenBalances"))$("#homeOpenBalances").textContent=plan.length?`${plan.length} saldo${plan.length===1?"":"s"} por resolver`:"Todo saldado ✓";
+  if($("#homeOpenBalancesAmount"))$("#homeOpenBalancesAmount").textContent=plan.length?`${money(plan.reduce((s,p)=>s+Number(p.amount||0),0))} pendiente`:"Sin transferencias pendientes";
+  const currentMember=myMember(),currentBalance=currentMember?balances[currentMember.id]||0:0;
+  if($("#balancesReceivable"))$("#balancesReceivable").textContent=money(Math.max(0,currentBalance));
+  if($("#balancesPayable"))$("#balancesPayable").textContent=money(Math.max(0,-currentBalance));
+  const paidSettlements=settlements.filter(s=>s.month===activeMonth&&s.status==="paid").reduce((sum,s)=>sum+Number(s.amount||0),0);
+  if($("#balancesPaidMonth"))$("#balancesPaidMonth").textContent=money(paidSettlements);
   $("#settlementList").innerHTML=plan.length?plan.map((p,i)=>settleHTML(p,true,i)).join(""):`<div class="empty"><b>Todo saldado ✓</b>No hay pagos pendientes este mes.</div>`;
   $$(".mark-paid").forEach(b=>b.onclick=()=>markSettlement(Number(b.dataset.index)));
   $$("#settlementList .premium-settle-card").forEach((el,i)=>bindSwipeGesture(el,null,()=>markSettlement(i)));
@@ -189,6 +199,7 @@ function renderAll(){
 
   renderCategories(homeTotal,homeEx);
   renderActivity();
+  renderBills();
   renderMembers(paid,share,balances);
   if($("#familyHubTitle"))$("#familyHubTitle").textContent=household?.name||"Mi Casa";
   if($("#familyHubTotal"))$("#familyHubTotal").textContent=money(monthTotalValue);
@@ -235,7 +246,7 @@ function renderCategories(total,source=rangeExpenses()){
 }
 function renderActivity(){
   const q=($("#activitySearch")?.value||"").toLowerCase(),cat=$("#activityCategory")?.value||"";
-  const filtered=expenses.filter(e=>(!q||String(e.description).toLowerCase().includes(q))&&(!cat||e.category===cat)&&(activityKind==="all"||activityKind==="expense"||(activityKind==="receipt"&&expenseAttachments(e).length)));
+  const filtered=expenses.filter(e=>(!q||String(e.description).toLowerCase().includes(q))&&(!cat||e.category===cat)&&(activityKind==="all"||(activityKind==="paid"&&e.paymentStatus!=="pending"&&e.payerId)||(activityKind==="receipt"&&expenseAttachments(e).length)));
   const empty=`<div class="empty"><b>No hay movimientos</b>No encontramos gastos con esos filtros.</div>`;
   const visible=filtered.slice(0,activityPageSize);
   if($("#activityList"))$("#activityList").innerHTML=visible.length?visible.map(feedHTML).join(""):empty;
@@ -247,6 +258,23 @@ $("#activitySearch").addEventListener("input",()=>{activityPageSize=25;renderAct
 $("#activityLoadMore")?.addEventListener("click",()=>{activityPageSize+=25;renderActivity()});
 $$("#activityChips [data-activity-kind]").forEach(b=>b.addEventListener("click",()=>{activityKind=b.dataset.activityKind;activityPageSize=25;$$("#activityChips button").forEach(x=>x.classList.toggle("active",x===b));renderActivity()}));
 
+
+function renderBills(){
+  const pending=pendingMonthBills().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const total=pending.reduce((s,e)=>s+Number(e.amount||0),0),next=nextRecurringSummary();
+  if($("#billsPendingTotal"))$("#billsPendingTotal").textContent=money(total);
+  if($("#billsPendingCount"))$("#billsPendingCount").textContent=String(pending.length);
+  if($("#billsNextRecurring"))$("#billsNextRecurring").textContent=next.title==="—"?"—":`${next.title} · ${next.sub}`;
+  if($("#pendingBillsList"))$("#pendingBillsList").innerHTML=pending.length?pending.map(e=>`<button class="bill-card" data-bill="${esc(e.id)}"><span class="bill-icon">${categoryIcon(e.category)}</span><div><b>${esc(e.description)}</b><small>${esc(e.category||"Otros")} · ${esc(e.date)} · ${e.participantIds?.length||0} participante${(e.participantIds?.length||0)===1?"":"s"}</small></div><strong>${money(e.amount)}</strong><em>→</em></button>`).join(""):`<div class="empty"><b>Todo pagado ✓</b>No hay cuentas pendientes este mes.</div>`;
+  $$("#pendingBillsList [data-bill]").forEach(b=>b.onclick=()=>openExpense(expenses.find(e=>e.id===b.dataset.bill)));
+}
+function openPendingBill(){
+  openExpense();
+  setTimeout(()=>setPaymentStatus("pending"),30);
+}
+$("#newPendingBillBtn")?.addEventListener("click",openPendingBill);
+$("#qaPendingBill")?.addEventListener("click",()=>{closeSheets();openPendingBill()});
+$("#balancesRecordPayment")?.addEventListener("click",()=>{const p=settlementPlan()[0];if(p)openSettlementPayment({...p,maxAmount:p.amount});else toast("No hay saldos pendientes.")});
 function renderMembers(paid,share,balances){
   $("#membersList").innerHTML=members.map(m=>`<button class="member-row clickable-member family-hub-member" data-person="${esc(m.id)}">${memberAvatar(m,"lg")}<div><b>${esc(m.name)}</b><small>${m.authUid===me?.uid?"Tu perfil · ":""}${esc(m.email||"Sin email")}</small><em>${balances[m.id]>0.005?"+"+money(balances[m.id]):balances[m.id]<-.005?"−"+money(-balances[m.id]):"Saldado"}</em></div><span class="role-pill">${m.role==="owner"?"Owner":"Member"}</span></button>`).join("");
   $$(".clickable-member").forEach(b=>b.onclick=()=>openMemberDetail(b.dataset.person));
@@ -711,9 +739,9 @@ function go(view){
   currentView=view;
   if(view==="admin"&&!isOwner()){view="home";toast(uiLang==="en"?"This section is only available to the Owner.":"Esta sección es solo para el Owner.")}
   $$(".page").forEach(p=>p.classList.remove("active","page-enter"));const target=$("#"+view+"Page");if(!target){view="home"}const page=$("#"+view+"Page");page.classList.add("active","page-enter");setTimeout(()=>page.classList.remove("page-enter"),320);$$("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
-  const titles=uiLang==="en"?{home:`Good morning, ${(me?.displayName||"").split(" ")[0]||"family"} 👋`,activity:"Activity",balances:"Balances",month:"Monthly statement",family:"My Home",admin:"Administration",vault:"Receipt vault"}:{home:`Buenos días, ${(me?.displayName||"").split(" ")[0]||"familia"} 👋`,activity:"Actividad",balances:"Saldos",month:"Estado del mes",family:"Mi Casa",admin:"Administración",vault:"Comprobantes"};
+  const titles=uiLang==="en"?{home:`Good morning, ${(me?.displayName||"").split(" ")[0]||"family"} 👋`,activity:"Expenses",bills:"Bills",balances:"Balances",month:"Calendar",family:"My Home",admin:"Administration",vault:"Receipts"}:{home:`Buenos días, ${(me?.displayName||"").split(" ")[0]||"familia"} 👋`,activity:"Gastos",bills:"Cuentas",balances:"Saldos",month:"Calendario",family:"Mi Casa",admin:"Administración",vault:"Comprobantes"};
   $("#pageTitle").textContent=titles[view]||"Mi Casa";applyLanguage();
-  if(allDataReady()){requestAnimationFrame(()=>{if(view==="month")renderCalendar();if(view==="family"){const c=settledBalanceData();renderMembers(c.paid,c.share,c.balances)}if(view==="activity")renderActivity();if(view==="vault")renderVault()})}
+  if(allDataReady()){requestAnimationFrame(()=>{if(view==="month")renderCalendar();if(view==="family"){const c=settledBalanceData();renderMembers(c.paid,c.share,c.balances)}if(view==="activity")renderActivity();if(view==="bills")renderBills();if(view==="vault")renderVault()})}
   window.scrollTo({top:0,behavior:"auto"})
 }
 $$("[data-view]").forEach(b=>b.onclick=()=>go(b.dataset.view));$$("[data-jump]").forEach(b=>b.onclick=()=>{const v=b.dataset.jump;go(v)});
@@ -721,7 +749,7 @@ $("#profileBtn").onclick=()=>{const mm=myMember();if(mm)openMemberDetail(mm.id)}
 
 // --- Bilingual UI (ES / EN) ---
 const EN={
-"Inicio":"Home","Actividad":"Activity","Saldos":"Balances","Mes":"Month","Miembros":"Members","Admin":"Admin",
+"Inicio":"Home","Actividad":"Activity","Gastos":"Expenses","Cuentas":"Bills","Saldos":"Balances","Mes":"Month","Miembros":"Members","Admin":"Admin",
 "Nuevo gasto":"New expense","Gastos del mes":"Monthly spending","movimientos":"transactions","Sin comparación aún":"No comparison yet",
 "Te deben":"Owed to you","Tú debes":"You owe","Balance personal":"Personal balance","Presupuesto usado":"Budget used",
 "Agregar gasto":"Add expense","Registra un pago":"Record a payment","Saldar":"Settle up","Quién paga a quién":"Who pays whom","ESTADO DE MI CASA":"MY HOME STATUS","Todo lo importante de la familia, en un solo lugar.":"Everything that matters to your family, in one place.","Gastos del mes":"Monthly spending","Presupuesto familiar":"Family budget","NUESTRA CASA":"OUR HOME","La familia este mes":"The family this month","Administrar":"Manage","PRESUPUESTO":"BUDGET","En qué estamos gastando":"Where we are spending","Ver límites":"View limits","PARA TI":"FOR YOU","Lo importante de Mi Casa":"What matters at home","RESUMEN":"SUMMARY","La casa al día":"Home at a glance","HISTORIA DE LA CASA":"HOME HISTORY","Actividad reciente":"Recent activity","Abrir original":"Open original","Anterior":"Previous","Siguiente":"Next",

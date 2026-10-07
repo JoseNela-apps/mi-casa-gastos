@@ -293,3 +293,27 @@ body.has-sheet{overflow:hidden}.sheet.hidden{display:none!important}
   .bottom-nav.v8-dock{width:min(560px,calc(100% - 16px))!important}
   .v8-dock button small{font-size:8px!important}
 }
+
+/* V9.5.4 — organized information architecture */
+.finance-hero{padding:28px 34px!important;min-height:auto!important}
+.hero-chart-wrap{height:72px!important;margin:8px 0 4px!important}
+.finance-hero #monthTotal{font-size:48px!important}
+.home-attention{margin:16px 0 22px}
+.attention-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.attention-grid>button{border:1px solid var(--line,#dfe7ee);background:rgba(255,255,255,.82);border-radius:20px;padding:16px;text-align:left;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;cursor:pointer}
+.attention-grid b{display:block;font-size:14px}.attention-grid small{display:block;color:#718197;margin-top:3px}.attention-grid em{font-style:normal;font-size:20px}.attention-icon{width:42px;height:42px;border-radius:14px;display:grid;place-items:center}.attention-icon.peach{background:#fff0dd}.attention-icon.mint{background:#e8f8f1}
+.home-analysis{margin:18px 0 24px;border:1px solid #e0e8ee;border-radius:22px;background:rgba(255,255,255,.68);overflow:hidden}
+.home-analysis>summary{list-style:none;cursor:pointer;padding:16px 20px;display:flex;align-items:center;justify-content:space-between}.home-analysis>summary::-webkit-details-marker{display:none}.home-analysis>summary span{display:grid;gap:2px}.home-analysis>summary small{letter-spacing:.12em;color:#7d8d9e;font-size:8px;font-weight:800}.home-analysis>summary b{font-size:14px}.home-analysis>summary em{font-style:normal;color:#5d7187;font-size:11px}.home-analysis-body{padding:0 16px 16px}.compact-weekly{margin-top:12px!important}
+.home-balance-shortcut .compact-balance-preview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bills-hero{border-radius:28px;padding:26px 28px;margin-bottom:14px;background:linear-gradient(135deg,#fff8ef,#f5fbff);display:flex;justify-content:space-between;align-items:center;gap:20px;border:1px solid #e4ebf0}.bills-hero h2{margin:3px 0 5px;font-size:24px}.bills-hero p{margin:0;color:#6f8093}
+.bills-summary-grid,.balance-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}.bills-summary-grid>div,.balance-summary-grid>div{background:#fff;border:1px solid #e1e8ee;border-radius:18px;padding:15px 17px}.bills-summary-grid span,.balance-summary-grid span{display:block;color:#748599;font-size:9px;text-transform:uppercase;letter-spacing:.08em;font-weight:800}.bills-summary-grid b,.balance-summary-grid b{display:block;font-size:20px;margin-top:5px}
+.bills-list{display:grid;gap:9px}.bill-card{width:100%;border:1px solid #e1e8ee;background:#fff;border-radius:17px;padding:13px 14px;display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:12px;text-align:left;cursor:pointer}.bill-icon{width:40px;height:40px;border-radius:13px;background:#f4f7fa;display:grid;place-items:center}.bill-card b,.bill-card small{display:block}.bill-card small{color:#76879a;margin-top:3px}.bill-card strong{font-size:15px}.bill-card em{font-style:normal;color:#7a8a9a}
+.v8-side-nav .nav[data-view="family"]{margin-top:12px;border-top:1px solid #e2e8ed;padding-top:18px}
+.premium-actions{margin-top:12px!important}
+.weekly-recap-card{min-height:auto!important}
+@media(max-width:900px){
+ .attention-grid,.bills-summary-grid,.balance-summary-grid,.home-balance-shortcut .compact-balance-preview{grid-template-columns:1fr}
+ .finance-hero{padding:20px!important}.finance-hero #monthTotal{font-size:38px!important}.hero-chart-wrap{height:54px!important}
+ .bills-hero{align-items:flex-start;flex-direction:column;padding:20px}.bills-hero .primary{width:100%}
+ .bottom-nav.v8-dock{grid-template-columns:repeat(6,1fr)!important}
+}
