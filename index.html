@@ -2,586 +2,739 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#f3f6fb">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F6F0E7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#17120F" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Mi Casa">
   <title>Mi Casa · Finance</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/icon.svg">
   <link rel="stylesheet" href="./styles.css">
 </head>
-<body>
-<div id="toast" class="toast" aria-live="polite"></div>
-<div id="livePill" class="live-pill" aria-live="polite"><span id="livePillIcon">✓</span><b id="livePillText">Mi Casa</b></div>
-<div id="pullRefresh" class="pull-refresh"><span>↻</span><b>Actualizar Mi Casa</b></div>
+<body class="app-loading">
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4.5" cy="6" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="18" r="1.2"/></symbol>
+    <symbol id="i-bill" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h15l-4-4"/><path d="M20 16H5l4 4"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.5h7.5A2.5 2.5 0 0 1 21 10v7.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2A6.5 6.5 0 0 1 21.5 20"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.8 2H4.2z"/><path d="M10 21h4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-chev-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+    <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-chev-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-checks" viewBox="0 0 24 24"><path d="m2 12.5 4.5 4.5L16 7.5"/><path d="m11.5 16.5.5.5 9.5-9.5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 4 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 17h.01"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3v5h5"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.6-1.8"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.5 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3"/><path d="M10 8l-4 4 4 4M6 12h10"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M4 11V9a3 3 0 0 1 3-3h12l-3-3"/><path d="M20 13v2a3 3 0 0 1-3 3H5l3 3"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16.5l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6z"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><path d="M3 4h2l2.4 11h10.2L20 8H6.3"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4.5 13.5h6.5l-1 8.5 8.5-11.5H12z"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18h2"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><path d="M5 15.5V11l2-5h10l2 5v4.5"/><path d="M3 15.5h18V19H3z"/><path d="M6 19v1.5M18 19v1.5"/><circle cx="7.5" cy="13" r=".9"/><circle cx="16.5" cy="13" r=".9"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7.2-4.4-9-9.1A4.6 4.6 0 0 1 12 8a4.6 4.6 0 0 1 9 2.9C19.2 15.6 12 20 12 20z"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="13" rx="2"/><path d="m10 8.5 5 2.5-5 2.5z"/><path d="M8 21h8"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V11M10 20V5M16 20v-7M21 20H3"/></symbol>
+    <symbol id="i-half" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14.5 8.5l2 2"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></symbol>
+    <symbol id="i-resume" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z"/></symbol>
+    <symbol id="i-message" viewBox="0 0 24 24"><path d="M4 5h16v11H9.5L4 20z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.5 6v6c0 4.4 3.3 7.9 7.5 9 4.2-1.1 7.5-4.6 7.5-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></symbol>
+    <symbol id="i-pie" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M18 5H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h15V9H5"/><circle cx="16" cy="14.5" r="1.2"/></symbol>
+    <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 4.2-2.4M19 12.9a10 10 0 0 0-2.5-1.8M1.5 9.3a15 15 0 0 1 4-2.7M22.5 9.3A15 15 0 0 0 11 5.1"/><path d="M12 20h.01"/></symbol>
+  </defs>
+</svg>
 
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="livePill" class="live-pill" aria-hidden="true"><span id="livePillIcon">✓</span><b id="livePillText">Mi Casa</b></div>
+<div id="pullRefresh" class="pull-refresh" aria-hidden="true"><svg class="ic"><use href="#i-refresh"/></svg><b>Actualizar Mi Casa</b></div>
+<div id="offlineBanner" class="offline-banner hidden" role="status"><svg class="ic"><use href="#i-wifi-off"/></svg><span>Sin conexión. Lo que ves puede no estar al día.</span></div>
+
+<!-- ============ ENTRAR ============ -->
 <section id="authView" class="auth-view">
-  <div class="auth-art">
-    <div class="brand-mark">⌂</div>
-    <div class="auth-copy">
-      <span class="eyebrow">MI CASA FINANCE</span>
-      <h1>Las finanzas de casa,<br>claras para todos.</h1>
-      <p>Gastos, presupuestos, pagos y cierres mensuales en un solo lugar.</p>
-    </div>
-    <div class="preview-stack">
-      <div class="mini-card"><span>Un solo hogar</span><b>Privado · Compartido</b><small>Datos reales, sin montos de demostración.</small></div>
-      <div class="mini-person"><i>✓</i><span><b>Acceso por invitación</b><small>Solo miembros autorizados</small></span></div>
-    </div>
+  <div class="auth-art" aria-hidden="true">
+    <div class="auth-house"><svg class="ic"><use href="#i-home"/></svg></div>
+    <span class="eyebrow">MI CASA</span>
+    <h1>Las cuentas de casa,<br><em>claras para todos.</em></h1>
+    <p>Gastos, cuentas por pagar, saldos entre la familia y el cierre de cada mes, en un solo lugar.</p>
+    <ul class="auth-points">
+      <li><svg class="ic"><use href="#i-shield"/></svg>Solo entran las personas que el Owner invita.</li>
+      <li><svg class="ic"><use href="#i-swap"/></svg>Quién pagó, quién debe y cuánto, sin hojas de cálculo.</li>
+    </ul>
   </div>
   <div class="auth-panel">
     <div class="auth-box">
-      <div class="mobile-logo"><span>⌂</span> Mi Casa</div>
-      <div class="segmented"><button id="loginTab" class="active">Entrar</button><button id="registerTab">Activar acceso</button></div>
-      <form id="loginForm">
-        <h2>Qué bueno verte</h2><p>Entra para ver las cuentas de tu casa.</p>
-        <label>Email<input id="loginEmail" type="email" autocomplete="email" required placeholder="tu@email.com"></label>
-        <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="••••••••"></label>
-        <button class="primary wide" type="submit">Entrar</button>
+      <div class="mobile-logo"><span class="auth-house small"><svg class="ic"><use href="#i-home"/></svg></span>Mi Casa</div>
+      <div class="segmented" role="tablist" aria-label="Entrar o activar acceso">
+        <button id="loginTab" class="active" type="button" role="tab" aria-selected="true">Entrar</button>
+        <button id="registerTab" type="button" role="tab" aria-selected="false">Activar acceso</button>
+      </div>
+      <form id="loginForm" novalidate>
+        <h2>Qué bueno verte</h2>
+        <p class="muted">Entra con el email y la contraseña de tu cuenta.</p>
+        <label>Email<input id="loginEmail" type="email" autocomplete="username" inputmode="email" required placeholder="tu@email.com"></label>
+        <label>Contraseña
+          <span class="pw-field"><input id="loginPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="Tu contraseña"><button id="loginPasswordToggle" class="pw-toggle" type="button" aria-label="Mostrar contraseña"><svg class="ic"><use href="#i-eye"/></svg></button></span>
+        </label>
+        <button id="loginSubmit" class="primary wide" type="submit">Entrar</button>
         <button id="forgotPassword" class="text-btn wide" type="button">Olvidé mi contraseña</button>
       </form>
-      <form id="registerForm" class="hidden">
-        <h2>Activa tu acceso</h2><p>Tu administrador debe haberte agregado antes como miembro.</p>
-        <label>Tu nombre<input id="registerName" required maxlength="40" placeholder="Tu nombre"></label>
-        <label>Email<input id="registerEmail" type="email" autocomplete="email" required placeholder="tu@email.com"></label>
-        <label>Contraseña<input id="registerPassword" type="password" autocomplete="new-password" required minlength="6" placeholder="Mínimo 6 caracteres"></label>
-        <button class="primary wide" type="submit">Activar mi acceso</button>
+      <form id="registerForm" class="hidden" novalidate>
+        <h2>Activa tu acceso</h2>
+        <p class="muted" id="registerIntro">Usa el mismo email con el que te invitaron y elige tu contraseña.</p>
+        <label>Tu nombre<input id="registerName" required maxlength="40" autocomplete="name" placeholder="Tu nombre"></label>
+        <label>Email<input id="registerEmail" type="email" autocomplete="username" inputmode="email" required placeholder="tu@email.com"></label>
+        <button id="registerEmailUnlock" class="text-btn small hidden" type="button">Usar otro email</button>
+        <label>Contraseña
+          <span class="pw-field"><input id="registerPassword" type="password" autocomplete="new-password" required minlength="6" placeholder="Mínimo 6 caracteres"><button id="registerPasswordToggle" class="pw-toggle" type="button" aria-label="Mostrar contraseña"><svg class="ic"><use href="#i-eye"/></svg></button></span>
+        </label>
+        <button id="registerSubmit" class="primary wide" type="submit">Activar mi acceso</button>
       </form>
-      <div id="authError" class="form-error"></div>
+      <div id="authError" class="form-error" role="alert"></div>
     </div>
   </div>
 </section>
 
-<section id="setupView" class="view hidden">
-  <div class="auth-card">
-    <div class="brand-mark">⌂</div>
-    <span class="eyebrow">ACCESO PENDIENTE</span>
-    <h1>Esta cuenta aún no pertenece a Mi Casa</h1>
-    <p>Solo el Owner puede autorizar miembros. Si ya fuiste agregado, usa exactamente el mismo email de tu invitación.</p>
-    <button id="claimInviteBtn" class="primary wide" type="button">Entrar con mi invitación</button>
+<!-- ============ ACCESO PENDIENTE / EN PAUSA ============ -->
+<section id="setupView" class="setup-view hidden">
+  <div class="setup-card">
+    <div class="auth-house"><svg class="ic"><use href="#i-lock"/></svg></div>
+    <span class="eyebrow" id="setupEyebrow">ACCESO PENDIENTE</span>
+    <h1 id="setupTitle">Esta cuenta aún no pertenece a Mi Casa</h1>
+    <p id="setupCopy">Solo el Owner o un administrador pueden invitarte. Pídeles que te agreguen con este mismo email.</p>
+    <p class="setup-email">Entraste como <b id="setupEmail"></b></p>
+    <button id="claimInviteBtn" class="primary wide" type="button">Ya me invitaron · Reintentar</button>
     <button id="setupLogout" class="text-btn wide" type="button">Cerrar sesión</button>
   </div>
 </section>
 
+<!-- ============ APP ============ -->
 <section id="appView" class="app hidden">
-  <aside class="sidebar">
-    <div class="side-brand"><span>⌂</span><div><small>MI CASA</small><b id="sideHouse">Finance</b></div></div>
-    <nav class="v8-side-nav">
-      <button class="nav active" data-view="home"><span>⌂</span><b>Inicio</b></button>
-      <button class="nav" data-view="activity"><span>≡</span><b>Gastos</b></button>
-      <button class="nav" data-view="bills"><span>▤</span><b>Cuentas</b></button>
-      <button class="nav" data-view="balances"><span>⇄</span><b>Saldos</b></button>
-      <button class="nav" data-view="month"><span>▦</span><b>Calendario</b></button>
-      <button class="nav" data-view="vault"><span>▧</span><b>Comprobantes</b></button>
-      <button class="nav" data-view="family"><span>◎</span><b>Mi Casa</b></button>
-      <div class="side-nav-separator owner-only"></div>
-      <button id="adminNav" class="nav owner-only hidden" data-view="admin"><span>⚙</span><b>Admin</b></button>
+  <aside class="sidebar" aria-label="Menú">
+    <div class="side-brand"><span class="auth-house small"><svg class="ic"><use href="#i-home"/></svg></span><div><small>MI CASA</small><b id="sideHouse">Mi Casa</b></div></div>
+    <nav class="side-nav" aria-label="Secciones">
+      <button class="nav active" type="button" data-view="home"><svg class="ic"><use href="#i-home"/></svg><b>Inicio</b></button>
+      <button class="nav" type="button" data-view="activity"><svg class="ic"><use href="#i-list"/></svg><b>Gastos</b></button>
+      <button class="nav" type="button" data-view="bills"><svg class="ic"><use href="#i-bill"/></svg><b>Cuentas</b><span class="nav-count hidden" id="sideBillsCount"></span></button>
+      <button class="nav" type="button" data-view="balances"><svg class="ic"><use href="#i-swap"/></svg><b>Saldos</b></button>
+      <button class="nav" type="button" data-view="month"><svg class="ic"><use href="#i-calendar"/></svg><b>Calendario</b></button>
+      <button class="nav" type="button" data-view="vault"><svg class="ic"><use href="#i-folder"/></svg><b>Comprobantes</b></button>
+      <button class="nav" type="button" data-view="family"><svg class="ic"><use href="#i-users"/></svg><b>Mi Casa</b></button>
+      <button id="adminNav" class="nav manage-only hidden" type="button" data-view="admin"><svg class="ic"><use href="#i-settings"/></svg><b>Admin</b></button>
     </nav>
-    <div class="side-user">
-      <div id="sideAvatar" class="avatar">?</div>
-      <div><b id="sideName">Usuario</b><small>Member</small></div>
-      <button id="logoutBtn" title="Cerrar sesión">↗</button>
-    </div>
+    <button class="side-user" id="sideUserBtn" type="button" aria-label="Mi perfil">
+      <span id="sideAvatar" class="avatar">?</span>
+      <span class="side-user-copy"><b id="sideName">Usuario</b><small id="sideRole">Miembro</small></span>
+    </button>
+    <button id="logoutBtn" class="text-btn side-logout" type="button"><svg class="ic"><use href="#i-logout"/></svg>Cerrar sesión</button>
   </aside>
 
-  <main class="main">
-    <header class="topbar v8-topbar">
-      <div><span class="eyebrow" id="monthEyebrow"></span><h1 id="pageTitle">Mi Casa</h1></div>
-      <div class="top-actions"><button class="icon-btn" id="globalSearchBtn" title="Buscar">⌕</button><button class="lang-btn" id="languageToggle" type="button" title="Cambiar idioma">ES / EN</button><button class="icon-btn notification-button" id="notifBtn" title="Avisos">♢<span id="notifBadge" class="notif-badge hidden">0</span></button><button class="icon-btn" id="profileBtn" title="Mi perfil">☺</button><button class="primary v8-new" id="newExpenseBtn">＋ Nuevo gasto</button></div>
+  <main class="main" id="main">
+    <header class="topbar">
+      <div class="topbar-title">
+        <span class="eyebrow" id="monthEyebrow"></span>
+        <h1 id="pageTitle">Mi Casa</h1>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="globalSearchBtn" type="button" aria-label="Buscar"><svg class="ic"><use href="#i-search"/></svg></button>
+        <button class="icon-btn notification-button" id="notifBtn" type="button" aria-label="Avisos"><svg class="ic"><use href="#i-bell"/></svg><span id="notifBadge" class="notif-badge hidden">0</span></button>
+        <button class="icon-btn avatar-btn" id="profileBtn" type="button" aria-label="Mi perfil"><span id="topAvatar" class="avatar sm">?</span></button>
+        <button class="primary write-only" id="newExpenseBtn" type="button"><svg class="ic"><use href="#i-plus"/></svg>Registrar</button>
+      </div>
     </header>
+    <div id="monthViewing" class="month-viewing hidden" role="status"><svg class="ic"><use href="#i-calendar"/></svg><span>Estás viendo <b id="monthViewingLabel"></b></span><button id="backToCurrentMonth" class="text-btn small" type="button">Volver a este mes</button></div>
+    <div id="loadErrorBanner" class="load-error hidden" role="alert"><svg class="ic"><use href="#i-alert"/></svg><div><b>No pudimos cargar todo</b><small id="loadErrorText">Revisa tu conexión. Los montos podrían estar incompletos.</small></div><button id="loadErrorRetry" class="secondary small" type="button">Reintentar</button></div>
 
-    <div id="homePage" class="page active premium-home">
-      <section class="mobile-welcome">
-        <div><span class="eyebrow">FAMILY FINANCE</span><h2 id="mobileGreeting">Mi Casa</h2></div>
-        <div class="mobile-header-actions"><button class="mobile-profile-orb" id="mobileSearchBtn" type="button" aria-label="Buscar">⌕</button><button class="mobile-profile-orb notification-button" id="mobileNotifBtn" type="button" aria-label="Avisos">♢<span id="mobileNotifBadge" class="notif-badge hidden">0</span></button><button class="mobile-profile-orb" id="mobileProfileBtn" type="button"><span id="mobileProfileAvatar">☺</span></button></div>
-      </section>
-
-      <div class="home-range-selector" role="tablist" aria-label="Período del resumen">
-        <button type="button" data-home-range="today">Hoy</button>
-        <button type="button" data-home-range="week">Esta semana</button>
-        <button type="button" data-home-range="month" class="active">Este mes</button>
-      </div>
-      <section class="finance-hero">
-        <div class="finance-hero-top">
-          <div><span class="hero-kicker" id="heroKicker">GASTO FAMILIAR · ESTE MES</span><strong id="monthTotal">$0.00</strong><div class="hero-trend" id="monthTrend">Sin comparación aún</div></div>
-          <button class="hero-arrow" data-jump="month" aria-label="Ver mes">↗</button>
-        </div>
-        <div class="hero-chart-wrap">
-          <div class="hero-chart-labels"><span>$</span><span id="heroChartMax"></span></div>
-          <div id="heroSparkChart" class="hero-spark-chart"></div>
-        </div>
-        <div class="family-avatar-row">
-          <div id="familyAvatarStack" class="premium-avatar-stack"></div>
-          <div class="family-avatar-copy"><b id="familyCount">Mi Casa</b><small id="movementCount">0 movimientos</small></div>
-        </div>
-        <div class="hero-balance-grid">
-          <div><span>Te deben</span><b id="owedToMe">$0.00</b></div>
-          <div><span>Tú debes</span><b id="iOwe">$0.00</b></div>
-          <div><span>Presupuesto</span><b id="budgetUsed">—</b></div>
-        </div>
-        <div class="hero-aurora a"></div><div class="hero-aurora b"></div>
-      </section>
-
-      <section class="today-action-center">
-  <div class="section-head"><div><span class="eyebrow">HOY</span><h2>Qué tengo que hacer</h2></div><button class="secondary small" id="todayRefreshBtn">Actualizar</button></div>
-  <div id="todayActionList" class="today-action-list"></div>
-</section>
-<section class="home-attention">
-        <div class="premium-section-head"><div><span class="eyebrow">ATENCIÓN</span><h2>Lo importante ahora</h2></div></div>
-        <div class="attention-grid">
-          <button data-jump="bills"><span class="attention-icon peach">▤</span><div><b id="homePendingBills">0 cuentas pendientes</b><small id="homePendingBillsAmount">$0.00 por pagar</small></div><em>→</em></button>
-          <button data-jump="balances"><span class="attention-icon mint">⇄</span><div><b id="homeOpenBalances">Todo saldado</b><small id="homeOpenBalancesAmount">Sin transferencias pendientes</small></div><em>→</em></button>
+    <!-- ============ INICIO ============ -->
+    <div id="homePage" class="page active">
+      <section class="band band-summary" aria-labelledby="heroKicker">
+        <div class="hero">
+          <div class="hero-head">
+            <span class="hero-kicker" id="heroKicker">GASTO FAMILIAR · ESTE MES</span>
+            <div class="range-switch" role="tablist" aria-label="Período del resumen">
+              <button type="button" data-home-range="today">Hoy</button>
+              <button type="button" data-home-range="week">7 días</button>
+              <button type="button" data-home-range="month" class="active">Mes</button>
+            </div>
+          </div>
+          <strong class="hero-total money" id="monthTotal" data-skel>—</strong>
+          <p class="hero-trend" id="monthTrend" data-skel>Cargando…</p>
+          <div class="hero-chart" id="heroSparkChart" aria-hidden="true"></div>
+          <div class="hero-legend" id="heroLegend"></div>
+          <div class="hero-stats">
+            <button type="button" class="hero-stat" data-jump="balances"><span>Te deben</span><b class="money" id="owedToMe" data-skel>—</b></button>
+            <button type="button" class="hero-stat" data-jump="balances"><span>Tú debes</span><b class="money" id="iOwe" data-skel>—</b></button>
+            <button type="button" class="hero-stat" id="heroBudgetBtn"><span>Presupuesto</span><b id="budgetUsed" data-skel>—</b><i class="mini-bar"><i id="budgetBar"></i></i></button>
+          </div>
         </div>
       </section>
 
-      <details class="home-analysis">
-        <summary><span><small>ANÁLISIS</small><b>Predicciones, presupuesto y resumen semanal</b></span><em>Ver análisis ↓</em></summary>
-        <div class="home-analysis-body">
-          <section class="intelligence-grid">
-            <article class="forecast-card intelligent-card"><div class="smart-card-head"><span class="smart-icon">↗</span><div><small>PREDICCIÓN DEL MES</small><b id="forecastTitle">Calculando tu cierre…</b></div></div><strong id="forecastAmount">$0.00</strong><p id="forecastCopy">Mi Casa proyectará el cierre usando tu ritmo actual.</p><div class="forecast-track"><i id="forecastTrack"></i></div></article>
-            <article class="safe-spend-card intelligent-card"><div class="smart-card-head"><span class="smart-icon">◎</span><div><small>SAFE TO SPEND</small><b>Disponible sin salirte del plan</b></div></div><strong id="safeToSpend">—</strong><p id="safeSpendCopy">Configura un presupuesto global para activar esta guía.</p></article>
-            <article class="health-card intelligent-card"><div class="health-ring" id="healthRing"><span id="healthScore">—</span></div><div class="health-copy"><small>SALUD FINANCIERA DEL HOGAR</small><b id="healthLabel">Construyendo estado…</b><p id="healthCopy">Presupuesto · recurrentes · saldos · gasto variable</p></div></article>
-          </section>
-          <section class="weekly-recap-card compact-weekly"><div class="weekly-recap-head"><div><span class="eyebrow">YOUR WEEK IN MI CASA</span><h2>Resumen semanal</h2></div><button type="button" id="openCompareBtn">Comparar ↗</button></div><div id="weeklyRecapGrid" class="weekly-recap-grid"></div></section>
-        </div>
-      </details>
-
-      <section class="premium-actions">
-        <button id="quickExpense"><span class="action-orb blue">＋</span><b>Gasto</b><small>Agregar</small></button>
-        <button data-jump="balances"><span class="action-orb mint">⇄</span><b>Saldar</b><small>Pendientes</small></button>
-        <button id="quickBudget"><span class="action-orb lilac">◔</span><b>Presupuesto</b><small>Límites</small></button>
-        <button data-jump="month"><span class="action-orb peach">▣</span><b>Reporte</b><small>Este mes</small></button>
+      <section class="band band-today" aria-labelledby="todayTitle">
+        <div class="band-head"><div><span class="eyebrow">HOY</span><h2 id="todayTitle">Qué hay que hacer</h2></div><span class="count-pill hidden" id="todayCount"></span></div>
+        <div id="todayActionList" class="today-list"><div class="skel-row"></div><div class="skel-row"></div></div>
       </section>
 
-      <section class="ai-insight-card">
-        <div class="ai-badge">✦</div>
-        <div><span>MI CASA INSIGHT</span><b id="smartInsight">Construyendo tu resumen familiar…</b><small id="smartInsightSub">Tus datos se actualizan automáticamente.</small></div>
-        <button data-jump="activity">→</button>
-      </section>
-      <section class="premium-section family-carousel-section">
-        <div class="premium-section-head"><div><span class="eyebrow">MI CASA</span><h2>Tu familia, de un vistazo</h2></div><button data-jump="family">Ver Mi Casa</button></div>
-        <div id="peopleStrip" class="family-carousel"></div>
-      </section>
-
-
-      <section class="premium-section goals-home-section">
-        <div class="premium-section-head"><div><span class="eyebrow">METAS FAMILIARES</span><h2>Lo que estamos construyendo</h2></div><button type="button" data-jump="family">Ver metas</button></div>
-        <div id="homeGoals" class="home-goals"></div>
-      </section>
-      <section class="premium-section">
-        <div class="premium-section-head"><div><span class="eyebrow">FAMILY SPACES</span><h2>En qué vive Mi Casa</h2></div><button id="editBudgetsBtn">Ver todo</button></div>
-        <div id="categoryList" class="space-carousel"></div>
-      </section>
-
-      <section class="premium-section">
-        <div class="premium-section-head"><div><span class="eyebrow">THIS WEEK</span><h2>Ritmo de gastos</h2></div><span class="week-total" id="weekTotal">$0</span></div>
-        <div class="weekly-card">
-          <div id="weeklyBars" class="weekly-bars"></div>
-          <div class="weekly-legend"><span><i class="dot good"></i>Dentro del ritmo</span><span><i class="dot high"></i>Día alto</span></div>
+      <section class="band band-explore" aria-labelledby="exploreTitle">
+        <div class="band-head"><div><span class="eyebrow">EXPLORAR</span><h2 id="exploreTitle">Cómo va la casa</h2></div></div>
+        <div class="explore-grid">
+          <article class="card card-cats">
+            <div class="card-head"><h3>En qué se gasta</h3><button class="text-btn small" id="editBudgetsBtn" type="button">Límites</button></div>
+            <div id="categoryList" class="cat-list"></div>
+          </article>
+          <article class="card card-week">
+            <div class="card-head"><h3>Últimos 7 días</h3><b class="money" id="weekTotal">—</b></div>
+            <div id="weeklyBars" class="week-bars"></div>
+            <div class="week-legend"><span><i class="dot"></i>Normal</span><span><i class="dot high"></i>Día alto</span></div>
+          </article>
+          <article class="card card-people">
+            <div class="card-head"><h3>La familia este mes</h3><button class="text-btn small" type="button" data-jump="family">Ver</button></div>
+            <div id="peopleStrip" class="people-strip"></div>
+          </article>
+          <article class="card card-goals">
+            <div class="card-head"><h3>Metas</h3><button class="text-btn small" type="button" data-jump="family">Ver todas</button></div>
+            <div id="homeGoals" class="goal-list"></div>
+          </article>
+          <article class="card card-recent">
+            <div class="card-head"><h3>Actividad reciente</h3><button class="text-btn small" type="button" data-jump="activity">Ver todo</button></div>
+            <div id="recentList" class="feed"></div>
+          </article>
+          <details class="card card-analysis">
+            <summary><span><svg class="ic"><use href="#i-chart"/></svg>Análisis del mes</span><svg class="ic chev"><use href="#i-chev-down"/></svg></summary>
+            <div class="analysis-grid">
+              <div class="metric"><small>Proyección de cierre</small><b class="money" id="forecastAmount">—</b><p id="forecastCopy"></p><i class="mini-bar"><i id="forecastTrack"></i></i></div>
+              <div class="metric"><small>Puedes gastar al día</small><b class="money" id="safeToSpend">—</b><p id="safeSpendCopy"></p></div>
+              <div class="metric metric-health"><div class="health-ring" id="healthRing"><span id="healthScore">—</span></div><div><small>Salud financiera</small><b id="healthLabel">—</b><p id="healthCopy"></p></div></div>
+            </div>
+            <div class="recap-head"><h4>Resumen semanal</h4><button type="button" class="secondary small" id="openCompareBtn">Comparar meses</button></div>
+            <div id="weeklyRecapGrid" class="recap-grid"></div>
+          </details>
+          <button class="card card-vault" id="openVaultFromHome" type="button"><svg class="ic"><use href="#i-folder"/></svg><span><b>Comprobantes</b><small id="vaultCountHome">—</small></span><svg class="ic"><use href="#i-arrow"/></svg></button>
         </div>
       </section>
-
-      <button class="receipt-vault-cta" id="openVaultFromHome" type="button">
-        <span class="vault-cta-icon">▧</span>
-        <span><small>DOCUMENTOS DE MI CASA</small><b>Comprobantes y facturas</b><em id="vaultCountHome">0 archivos guardados</em></span>
-        <strong>→</strong>
-      </button>
-
-      <section class="premium-section home-balance-shortcut">
-        <div class="premium-section-head"><div><span class="eyebrow">SALDOS</span><h2>Quién paga a quién</h2></div><button data-jump="balances">Abrir Saldos</button></div>
-        <div id="settlementPreview" class="balance-cards compact-balance-preview"></div>
-      </section>
-
-      <section class="premium-section activity-zone">
-        <div class="premium-section-head"><div><span class="eyebrow">RECENT</span><h2>Actividad reciente</h2></div><button data-jump="activity">Ver todo</button></div>
-        <div id="recentList" class="feed premium-feed"></div>
-      </section>
-
-      <div id="insightsGrid" class="hidden"></div>
-      <div id="familyPulse" class="hidden"></div>
-      <div class="budget-progress hidden"><i id="budgetProgress"></i></div>
-      <p id="familyStatusMessage" class="hidden"></p>
     </div>
 
-    <div id="activityPage" class="page premium-subpage activity-premium">
-      <div class="page-card">
-        <div class="section-head"><div><span class="eyebrow">DINERO QUE YA SE MOVIÓ</span><h2>Gastos</h2></div><div class="section-actions"><button class="secondary small" id="activityVault">▧ Comprobantes</button><button class="primary small" id="activityAdd">＋ Agregar</button></div></div>
-        <div class="status-legend"><span class="status-pill paid">Pagado</span><span class="status-pill pending">Pendiente</span><span class="status-pill partial">Parcial</span><span class="status-pill settled">Saldado</span><span class="status-pill covered">Cubierto</span></div><div class="activity-chips" id="activityChips"><button class="active" data-activity-kind="all">Todos</button><button data-activity-kind="paid">Pagados</button><button data-activity-kind="receipt">Con comprobante</button></div>
-        <div class="filter-row">
-          <input id="activitySearch" placeholder="Buscar gasto…">
-          <select id="activityCategory"><option value="">Todas las categorías</option><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Suscripciones</option><option>Otros</option></select>
-        </div>
-        <div id="activityList" class="feed"></div><button id="activityLoadMore" class="secondary wide hidden" type="button">Ver más movimientos</button>
+    <!-- ============ GASTOS ============ -->
+    <div id="activityPage" class="page">
+      <div class="page-head"><div><span class="eyebrow">DINERO QUE SE MOVIÓ</span><h2>Gastos</h2></div><div class="head-actions"><button class="secondary small" id="activityExport" type="button"><svg class="ic"><use href="#i-download"/></svg>CSV</button><button class="secondary small" id="activityVault" type="button"><svg class="ic"><use href="#i-folder"/></svg>Comprobantes</button><button class="primary small write-only" id="activityAdd" type="button"><svg class="ic"><use href="#i-plus"/></svg>Agregar</button></div></div>
+      <div class="chips" id="activityChips" role="toolbar" aria-label="Filtrar por estado">
+        <button type="button" class="chip active" data-activity-kind="all">Todos</button>
+        <button type="button" class="chip" data-activity-kind="paid"><svg class="ic"><use href="#i-check"/></svg>Pagado</button>
+        <button type="button" class="chip" data-activity-kind="pending"><svg class="ic"><use href="#i-clock"/></svg>Pendiente</button>
+        <button type="button" class="chip" data-activity-kind="partial"><svg class="ic"><use href="#i-half"/></svg>Parcial</button>
+        <button type="button" class="chip" data-activity-kind="settled"><svg class="ic"><use href="#i-checks"/></svg>Saldado</button>
+        <button type="button" class="chip" data-activity-kind="covered"><svg class="ic"><use href="#i-heart"/></svg>Cubierto</button>
+        <button type="button" class="chip" data-activity-kind="receipt"><svg class="ic"><use href="#i-camera"/></svg>Con comprobante</button>
+      </div>
+      <div class="filter-row">
+        <label class="search-field"><svg class="ic"><use href="#i-search"/></svg><input id="activitySearch" type="search" placeholder="Buscar gasto…" aria-label="Buscar gasto"></label>
+        <select id="activityCategory" aria-label="Categoría" data-cat-select="all"></select>
+        <select id="activityPerson" aria-label="Persona"><option value="">Todas las personas</option></select>
+        <select id="activityMonth" aria-label="Mes"><option value="">Todos los meses</option></select>
+      </div>
+      <p class="result-line" id="activitySummary"></p>
+      <div id="activityList" class="feed card"></div>
+      <button id="activityLoadMore" class="secondary wide hidden" type="button">Ver más movimientos</button>
+    </div>
+
+    <!-- ============ CUENTAS ============ -->
+    <div id="billsPage" class="page">
+      <div class="page-head"><div><span class="eyebrow">POR PAGAR</span><h2>Cuentas pendientes</h2><p class="muted">Luz, agua, teléfono y todo lo que todavía nadie ha pagado.</p></div><div class="head-actions"><button class="secondary small" type="button" data-jump="month"><svg class="ic"><use href="#i-calendar"/></svg>Calendario</button><button class="primary small write-only" id="newPendingBillBtn" type="button"><svg class="ic"><use href="#i-plus"/></svg>Nueva cuenta</button></div></div>
+      <div class="stat-row">
+        <div class="stat"><span>Total pendiente</span><b class="money" id="billsPendingTotal">—</b></div>
+        <div class="stat"><span>Cuentas abiertas</span><b id="billsPendingCount">—</b></div>
+        <div class="stat stat-bad"><span>Vencidas</span><b id="billsOverdueCount">—</b></div>
+        <div class="stat"><span>Próximo recurrente</span><b id="billsNextRecurring">—</b></div>
+      </div>
+      <div class="timeline">
+        <section class="tl-group tl-overdue"><h3><svg class="ic"><use href="#i-alert"/></svg>Vencidas</h3><div id="billsOverdue" class="tl-list"></div></section>
+        <section class="tl-group"><h3><svg class="ic"><use href="#i-clock"/></svg>Vencen esta semana</h3><div id="billsWeek" class="tl-list"></div></section>
+        <section class="tl-group"><h3><svg class="ic"><use href="#i-calendar"/></svg>Más adelante</h3><div id="billsLater" class="tl-list"></div></section>
+        <section class="tl-group"><h3><svg class="ic"><use href="#i-bill"/></svg>Sin vencimiento</h3><div id="billsNoDue" class="tl-list"></div></section>
+        <section class="tl-group tl-paid"><h3><svg class="ic"><use href="#i-check"/></svg>Pagadas este mes</h3><div id="billsPaid" class="tl-list"></div></section>
       </div>
     </div>
 
-    <div id="billsPage" class="page premium-subpage bills-premium">
-      <section class="bills-hero">
-        <div><span class="eyebrow">OBLIGACIONES DEL HOGAR</span><h2>Cuentas pendientes</h2><p>Luz, agua, basura, teléfono y cualquier cuenta que todavía nadie ha pagado.</p></div>
-        <button class="primary" id="newPendingBillBtn">＋ Nueva cuenta</button>
-      </section>
-      <div class="bills-summary-grid">
-        <div><span>Total pendiente</span><b id="billsPendingTotal">$0.00</b></div>
-        <div><span>Cuentas abiertas</span><b id="billsPendingCount">0</b></div>
-        <div><span>Próximo recurrente</span><b id="billsNextRecurring">—</b></div>
+    <!-- ============ SALDOS ============ -->
+    <div id="balancesPage" class="page">
+      <div class="page-head"><div><span class="eyebrow">ENTRE LA FAMILIA</span><h2>Saldos</h2><p class="muted">La menor cantidad posible de transferencias. Cada pago registrado se descuenta solo.</p></div><div class="head-actions"><button class="primary small write-only" id="balancesRecordPayment" type="button"><svg class="ic"><use href="#i-plus"/></svg>Registrar pago</button></div></div>
+      <div class="stat-row">
+        <div class="stat stat-good"><span>Te deben</span><b class="money" id="balancesReceivable">—</b></div>
+        <div class="stat stat-bad"><span>Tú debes</span><b class="money" id="balancesPayable">—</b></div>
+        <div class="stat"><span>Pagado este mes</span><b class="money" id="balancesPaidMonth">—</b></div>
       </div>
-      <div class="page-card">
-        <div class="section-head"><div><span class="eyebrow">POR PAGAR</span><h2>Qué necesita atención</h2></div><button class="secondary small" data-jump="month">Ver calendario</button></div>
-        <div class="bill-groups">
-<section><h3>Vence pronto</h3><div id="billsDueSoon" class="bills-list"></div></section>
-<section><h3>Sin fecha</h3><div id="billsNoDue" class="bills-list"></div></section>
-<section><h3>Pagadas este mes</h3><div id="billsPaid" class="bills-list"></div></section>
-</div>
-      </div>
-    </div>
-
-    <div id="balancesPage" class="page premium-subpage balances-premium">
-      <div class="page-card">
-        <div class="section-head"><div><span class="eyebrow">LIQUIDACIÓN FAMILIAR</span><h2>Saldos</h2></div><button class="primary small" id="balancesRecordPayment">＋ Registrar pago</button></div>
-        <div class="balance-summary-grid"><div><span>Por cobrar</span><b id="balancesReceivable">$0.00</b></div><div><span>Por pagar</span><b id="balancesPayable">$0.00</b></div><div><span>Pagado este mes</span><b id="balancesPaidMonth">$0.00</b></div></div>
-        <p class="muted">Mostramos la menor cantidad posible de transferencias y descontamos automáticamente cada pago registrado.</p>
-        <div id="settlementList" class="settlement-list"></div>
-      </div>
-      <div class="page-card">
-        <div class="section-head"><div><span class="eyebrow">HISTORIAL</span><h2>Pagos registrados</h2></div></div>
+      <div id="settlementList" class="flow-list"></div>
+      <section id="previousBalances" class="card prev-balances hidden"></section>
+      <section class="card">
+        <div class="card-head"><h3>Pagos registrados</h3></div>
         <div id="settlementHistory" class="feed"></div>
-      </div>
-    </div>
-
-    <div id="monthPage" class="page premium-subpage month-premium"><section class="month-close-center">
-<div class="section-head"><div><span class="eyebrow">CIERRE MENSUAL</span><h2>Resumen del mes</h2></div><button class="primary small owner-only" id="closeMonthPrimaryBtn">Cerrar mes</button></div>
-<div id="monthCloseMetrics" class="month-close-metrics"></div>
-<div class="month-close-actions"><button class="secondary" id="monthClosePdfBtn">Generar PDF</button><button class="secondary owner-only" id="monthReopenBtn">Reabrir mes</button></div>
-</section>
-      <div class="statement">
-        <span class="eyebrow">ESTADO DE CUENTA</span><h2 id="statementMonth"></h2>
-        <strong id="statementTotal">$0.00</strong><p id="statementMeta">0 gastos · Mes abierto</p>
-        <div class="statement-actions"><button class="secondary" id="printReport">Reporte PDF</button><button class="primary owner-only" id="closeMonthBtn">Cerrar mes</button></div>
-      </div>
-      <div class="month-grid">
-        <div class="page-card">
-          <div class="section-head calendar-head"><div><span class="eyebrow">CALENDARIO</span><h2>Compromisos del mes</h2></div><div class="calendar-tools"><button type="button" class="calendar-nav" id="prevMonthBtn">‹</button><button type="button" class="calendar-current" id="calendarMonthLabel">Mes</button><button type="button" class="calendar-nav" id="nextMonthBtn">›</button><button id="addRecurringBtn" class="secondary small owner-only">＋ Recurrente</button></div></div>
-          <div id="financialCalendar" class="financial-calendar"></div>
-        </div>
-        <div class="page-card">
-          <div class="section-head"><div><span class="eyebrow">PRÓXIMOS</span><h2>Pagos recurrentes</h2></div></div>
-          <div id="recurringList"></div>
-        </div>
-      </div>
-      <div class="page-card"><h2>Resumen por persona</h2><div id="monthPeople"></div></div>
-      <section class="page-card subscription-center"><div class="section-head"><div><span class="eyebrow">SUSCRIPCIONES Y RECURRENTES</span><h2>Compromisos fijos</h2></div><div class="subscription-summary"><small>Al mes</small><b id="subscriptionMonthly">$0.00</b><small>Al año</small><b id="subscriptionYearly">$0.00</b></div></div><div id="subscriptionCards" class="subscription-cards"></div></section>
-    </div>
-
-
-    <div id="vaultPage" class="page premium-subpage vault-premium">
-      <div class="page-card vault-shell">
-        <div class="section-head"><div><span class="eyebrow">DOCUMENTOS</span><h2>Bóveda de comprobantes</h2></div><button type="button" class="primary small" id="vaultAddExpense">＋ Nuevo gasto</button></div>
-        <p class="muted">Fotos y PDFs adjuntos a los gastos de Mi Casa. Toca cualquier archivo para previsualizarlo.</p>
-        <div class="vault-stats">
-          <div><span>Archivos</span><b id="vaultFileCount">0</b></div>
-          <div><span>Gastos con comprobante</span><b id="vaultExpenseCount">0</b></div>
-          <div><span>Este mes</span><b id="vaultMonthCount">0</b></div>
-        </div>
-        <div class="vault-filters">
-          <input id="vaultSearch" placeholder="Buscar comprobante o gasto…">
-          <select id="vaultMember"><option value="">Todas las personas</option></select>
-          <select id="vaultCategory"><option value="">Todas las categorías</option><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Suscripciones</option><option>Otros</option></select>
-        </div>
-        <div id="vaultGrid" class="vault-grid"></div>
-      </div>
-    </div>
-
-    <div id="familyPage" class="page premium-subpage family-hub-page">
-      <section class="family-hub-hero">
-        <div><span class="eyebrow">NUESTRO HOGAR</span><h2 id="familyHubTitle">Mi Casa</h2><p id="familyHubStatus">Familia conectada y cuentas al día.</p></div>
-        <div id="familyHubAvatars" class="family-hub-avatars"></div>
-        <div class="family-hub-total"><small>Gastos del mes</small><strong id="familyHubTotal">$0.00</strong></div>
       </section>
-      <div class="page-card family-members-card">
-        <div class="section-head"><div><span class="eyebrow">PERSONAS</span><h2>Familia</h2></div><button class="primary small owner-only" id="inviteBtn">＋ Agregar miembro</button></div>
-        <p class="muted">Toca un perfil para ver su balance, actividad y personalización.</p>
-        <div id="membersList" class="members-list family-members-list"></div>
+    </div>
+
+    <!-- ============ CALENDARIO + CIERRE ============ -->
+    <div id="monthPage" class="page">
+      <section class="card close-card" id="monthCloseCard">
+        <div class="close-head">
+          <div><span class="eyebrow">CIERRE DEL MES</span><h2 id="monthCloseTitle">Mes</h2></div>
+          <span class="status-badge" id="monthCloseStatus">Abierto</span>
+        </div>
+        <div id="monthCloseMetrics" class="close-metrics"></div>
+        <div id="monthCloseChecklist" class="checklist"></div>
+        <div class="close-actions">
+          <button class="secondary" id="monthClosePdfBtn" type="button"><svg class="ic"><use href="#i-file"/></svg>Reporte PDF</button>
+          <button class="secondary" id="monthCsvBtn" type="button"><svg class="ic"><use href="#i-download"/></svg>Exportar CSV</button>
+          <button class="primary manage-only" id="closeMonthBtn" type="button"><svg class="ic"><use href="#i-lock"/></svg><span>Cerrar mes</span></button>
+        </div>
+      </section>
+      <div class="month-grid">
+        <section class="card">
+          <div class="card-head calendar-head">
+            <h3>Compromisos del mes</h3>
+            <div class="calendar-tools">
+              <button type="button" class="icon-btn sm" id="prevMonthBtn" aria-label="Mes anterior"><svg class="ic"><use href="#i-chev-left"/></svg></button>
+              <button type="button" class="calendar-current" id="calendarMonthLabel">Mes</button>
+              <button type="button" class="icon-btn sm" id="nextMonthBtn" aria-label="Mes siguiente"><svg class="ic"><use href="#i-chev-right"/></svg></button>
+            </div>
+          </div>
+          <div id="financialCalendar" class="calendar"></div>
+          <p class="hint">Toca un día para ver sus movimientos. Mantén presionado para registrar un gasto ese día.</p>
+        </section>
+        <section class="card">
+          <div class="card-head"><h3>Pagos recurrentes</h3><button id="addRecurringBtn" class="secondary small manage-only" type="button"><svg class="ic"><use href="#i-plus"/></svg>Recurrente</button></div>
+          <div id="recurringList" class="feed"></div>
+          <div class="subscription-summary"><div><small>Al mes</small><b class="money" id="subscriptionMonthly">—</b></div><div><small>Al año</small><b class="money" id="subscriptionYearly">—</b></div></div>
+        </section>
       </div>
-      <section class="page-card coverage-manager-card">
-        <div class="section-head"><div><span class="eyebrow">COBERTURA FAMILIAR</span><h2>Quién cubre a quién</h2></div><button class="primary small owner-only" id="editCoverageBtn">Administrar</button></div>
-        <p class="muted">La participación original se conserva, pero la responsabilidad final pasa a la persona que la cubre.</p>
+      <section class="card"><div class="card-head"><h3>Resumen por persona</h3></div><div id="monthPeople" class="people-table"></div></section>
+    </div>
+
+    <!-- ============ COMPROBANTES ============ -->
+    <div id="vaultPage" class="page">
+      <div class="page-head"><div><span class="eyebrow">DOCUMENTOS</span><h2>Comprobantes</h2><p class="muted">Fotos y PDFs de los gastos. Toca uno para verlo.</p></div><div class="head-actions"><button type="button" class="primary small write-only" id="vaultAddExpense"><svg class="ic"><use href="#i-plus"/></svg>Nuevo gasto</button></div></div>
+      <div class="stat-row">
+        <div class="stat"><span>Archivos</span><b id="vaultFileCount">—</b></div>
+        <div class="stat"><span>Gastos con comprobante</span><b id="vaultExpenseCount">—</b></div>
+        <div class="stat"><span>Este mes</span><b id="vaultMonthCount">—</b></div>
+      </div>
+      <div class="filter-row">
+        <label class="search-field"><svg class="ic"><use href="#i-search"/></svg><input id="vaultSearch" type="search" placeholder="Buscar comprobante o gasto…" aria-label="Buscar comprobante"></label>
+        <select id="vaultMember" aria-label="Persona"><option value="">Todas las personas</option></select>
+        <select id="vaultCategory" aria-label="Categoría" data-cat-select="all"></select>
+      </div>
+      <div id="vaultGrid" class="vault-grid"></div>
+    </div>
+
+    <!-- ============ MI CASA ============ -->
+    <div id="familyPage" class="page">
+      <section class="family-hero">
+        <div><span class="eyebrow">NUESTRO HOGAR</span><h2 id="familyHubTitle">Mi Casa</h2><p id="familyHubStatus" class="muted"></p></div>
+        <div id="familyHubAvatars" class="avatar-stack"></div>
+        <div class="family-total"><small>Gastos del mes</small><strong class="money" id="familyHubTotal">—</strong></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h3>Familia</h3><button class="primary small manage-only" id="inviteBtn" type="button"><svg class="ic"><use href="#i-plus"/></svg>Agregar persona</button></div>
+        <div id="membersList" class="member-list"></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h3>Quién cubre a quién</h3><button class="secondary small manage-only" id="editCoverageBtn" type="button">Administrar</button></div>
+        <p class="muted small">La participación original se conserva, pero la responsabilidad final pasa a quien cubre.</p>
         <div id="coverageSummary" class="coverage-summary"></div>
       </section>
-      <section class="page-card family-goals-card"><div class="section-head"><div><span class="eyebrow">METAS</span><h2>Objetivos familiares</h2></div><button class="primary small owner-only" id="addGoalBtn">＋ Nueva meta</button></div><div id="goalsGrid" class="goals-grid"></div></section>
-      <section class="page-card automation-center owner-only"><div class="section-head"><div><span class="eyebrow">AUTOMATIZACIONES</span><h2>Reglas inteligentes</h2></div><button class="secondary small" id="addAutomationBtn">＋ Regla</button></div><p class="muted">Alertas por presupuesto, gastos grandes, comprobantes faltantes y pagos próximos.</p><div id="automationList" class="automation-list"></div></section>
-      <div class="family-hub-actions">
-        <button type="button" data-jump="balances"><span>⇄</span><div><b>Saldos familiares</b><small>Quién paga a quién</small></div><em>→</em></button>
-        <button type="button" data-jump="vault"><span>▧</span><div><b>Comprobantes</b><small>Documentos de la casa</small></div><em>→</em></button>
-        <button type="button" class="owner-only" data-jump="admin"><span>⚙</span><div><b>Administración</b><small>Accesos y configuración</small></div><em>→</em></button>
+      <section class="card">
+        <div class="card-head"><h3>Metas familiares</h3><button class="primary small manage-only" id="addGoalBtn" type="button"><svg class="ic"><use href="#i-plus"/></svg>Nueva meta</button></div>
+        <div id="goalsGrid" class="goal-list wide"></div>
+      </section>
+      <section class="card manage-only">
+        <div class="card-head"><h3>Reglas de avisos</h3><button class="secondary small" id="addAutomationBtn" type="button"><svg class="ic"><use href="#i-plus"/></svg>Regla</button></div>
+        <p class="muted small">Avisos por presupuesto, gastos grandes, comprobantes faltantes y pagos próximos.</p>
+        <div id="automationList" class="feed"></div>
+      </section>
+      <div class="link-list">
+        <button type="button" class="link-row" data-jump="balances"><svg class="ic"><use href="#i-swap"/></svg><span><b>Saldos</b><small>Quién paga a quién</small></span><svg class="ic"><use href="#i-chev-right"/></svg></button>
+        <button type="button" class="link-row" data-jump="vault"><svg class="ic"><use href="#i-folder"/></svg><span><b>Comprobantes</b><small>Documentos de la casa</small></span><svg class="ic"><use href="#i-chev-right"/></svg></button>
+        <button type="button" class="link-row" data-jump="month"><svg class="ic"><use href="#i-calendar"/></svg><span><b>Calendario y cierre</b><small>Recurrentes y cierre del mes</small></span><svg class="ic"><use href="#i-chev-right"/></svg></button>
+        <button type="button" class="link-row manage-only" data-jump="admin"><svg class="ic"><use href="#i-settings"/></svg><span><b>Administración</b><small>Accesos, categorías y respaldo</small></span><svg class="ic"><use href="#i-chev-right"/></svg></button>
       </div>
+      <section class="card account-card">
+        <div class="card-head"><h3>Tu cuenta</h3></div>
+        <p class="muted small" id="accountEmail"></p>
+        <div class="account-actions">
+          <button class="secondary" id="familyPasswordBtn" type="button"><svg class="ic"><use href="#i-key"/></svg>Cambiar contraseña</button>
+          <button class="secondary" id="themeToggle" type="button"><svg class="ic"><use href="#i-moon"/></svg><span id="themeToggleText">Tema: automático</span></button>
+          <button class="secondary" id="languageToggle" type="button"><svg class="ic"><use href="#i-globe"/></svg><span id="languageToggleText">English</span></button>
+          <button class="danger-outline" id="familyLogoutBtn" type="button"><svg class="ic"><use href="#i-logout"/></svg>Cerrar sesión</button>
+        </div>
+        <p class="version-line">Mi Casa <span id="appVersionLabel"></span></p>
+      </section>
     </div>
 
-    <div id="adminPage" class="page premium-subpage admin-premium">
-      <div class="page-card">
-        <div class="section-head"><div><span class="eyebrow">OWNER</span><h2>Administración</h2></div></div>
-        <p class="muted">Controla acceso, recuperación de cuenta y estructura del hogar.</p>
-        <div class="admin-callout"><b>Seguridad</b><p>Las contraseñas nunca son visibles. Puedes enviar un enlace seguro de restablecimiento.</p></div>
-        <div class="admin-edit-hint"><b>Administración de usuarios</b><span>Edita nombre, email, acceso y avatar. Las contraseñas se administran de forma segura mediante enlace de restablecimiento.</span></div><div id="adminUsers" class="members-list"></div><div class="admin-smart-grid">
-<button type="button" id="adminBudgetAdvanced"><span>◔</span><div><b>Presupuesto inteligente</b><small>Global, semanal y rollover</small></div><em>→</em></button>
-<button type="button" id="adminAutomations"><span>✦</span><div><b>Automatizaciones</b><small>Alertas y reglas internas</small></div><em>→</em></button>
-<button type="button" id="adminCompare"><span>↔</span><div><b>Comparar meses</b><small>Tendencias por categoría</small></div><em>→</em></button>
-</div>
-      </div>
+    <!-- ============ ADMIN ============ -->
+    <div id="adminPage" class="page manage-only">
+      <div class="page-head"><div><span class="eyebrow">ADMINISTRACIÓN</span><h2>Accesos y configuración</h2><p class="muted">Quién entra, qué puede hacer cada persona y las herramientas del hogar.</p></div><div class="head-actions"><button class="primary small" id="adminInviteBtn" type="button"><svg class="ic"><use href="#i-plus"/></svg>Invitar persona</button></div></div>
+      <section class="card">
+        <div class="card-head"><h3>Accesos</h3></div>
+        <div class="role-legend">
+          <span><b>Owner</b> todo, incluido nombrar administradores.</span>
+          <span><b>Administrador</b> gestiona personas, presupuestos, recurrentes, metas y el cierre.</span>
+          <span><b>Miembro</b> registra gastos y pagos; edita solo lo que creó o pagó.</span>
+          <span><b>Solo lectura</b> ve todo, no cambia nada.</span>
+        </div>
+        <div id="adminUsers" class="member-list"></div>
+      </section>
+      <section class="card readiness-card" id="accessReadiness"></section>
+      <section class="card">
+        <div class="card-head"><h3>Herramientas</h3></div>
+        <div class="tool-grid">
+          <button type="button" class="tool" id="adminBudgetAdvanced"><svg class="ic"><use href="#i-pie"/></svg><b>Presupuestos</b><small>Global, semanal y por categoría</small></button>
+          <button type="button" class="tool" id="adminCategories"><svg class="ic"><use href="#i-tag"/></svg><b>Categorías</b><small>Agrega las de tu casa</small></button>
+          <button type="button" class="tool" id="adminAutomations"><svg class="ic"><use href="#i-sparkle"/></svg><b>Reglas de avisos</b><small>Alertas internas</small></button>
+          <button type="button" class="tool" id="adminCompare"><svg class="ic"><use href="#i-chart"/></svg><b>Comparar meses</b><small>Por categoría</small></button>
+          <button type="button" class="tool" id="adminCsvAllBtn"><svg class="ic"><use href="#i-download"/></svg><b>Exportar todo</b><small>CSV de todos los gastos</small></button>
+          <button type="button" class="tool" id="adminBackupBtn"><svg class="ic"><use href="#i-shield"/></svg><b>Respaldo completo</b><small>Archivo JSON con todo, incluidos comprobantes</small></button>
+        </div>
+      </section>
     </div>
   </main>
 
-  <nav class="bottom-nav v8-dock" aria-label="Navegación principal">
-    <button class="active" data-view="home"><span>⌂</span><small>Inicio</small></button>
-    <button data-view="activity"><span>≡</span><small>Gastos</small></button>
-    <button data-view="balances"><span>⇄</span><small>Saldos</small></button>
-    <button id="mobileAdd" class="add" aria-label="Acciones rápidas"><span>＋</span></button>
-    <button data-view="bills"><span>▤</span><small>Cuentas</small></button>
-    <button data-view="family"><span>◎</span><small>Mi Casa</small></button>
+  <nav class="bottom-nav" aria-label="Navegación principal">
+    <button class="active" type="button" data-view="home"><svg class="ic"><use href="#i-home"/></svg><small>Inicio</small></button>
+    <button type="button" data-view="activity"><svg class="ic"><use href="#i-list"/></svg><small>Gastos</small></button>
+    <button id="mobileAdd" class="add write-only" type="button" aria-label="Registrar"><svg class="ic"><use href="#i-plus"/></svg></button>
+    <button type="button" data-view="bills"><svg class="ic"><use href="#i-bill"/></svg><small>Cuentas</small><span class="nav-dot hidden" id="dockBillsDot"></span></button>
+    <button type="button" data-view="balances"><svg class="ic"><use href="#i-swap"/></svg><small>Saldos</small></button>
+    <button type="button" data-view="family"><svg class="ic"><use href="#i-users"/></svg><small>Mi Casa</small></button>
   </nav>
 </section>
 
-<div id="reportLanguageModal" class="report-lang-modal hidden" role="dialog" aria-modal="true">
-  <div class="report-lang-card report-builder-card">
+<!-- ============ REPORTE PDF ============ -->
+<div id="reportLanguageModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
+  <div class="modal-card">
     <span class="eyebrow">REPORTE PDF</span>
-    <h2>¿Qué reporte quieres imprimir?</h2>
-    <p>Elige un reporte global de toda la casa o un estado individual por persona.</p>
-
-    <div class="report-type-grid">
-      <button type="button" class="report-type active" data-report-type="global">
-        <span>⌂</span><div><b>Reporte global</b><small>Gastos, personas, saldos y quién paga a quién.</small></div>
-      </button>
-      <button type="button" class="report-type" data-report-type="member">
-        <span>◎</span><div><b>Reporte por usuario</b><small>Estado individual, obligaciones y movimientos.</small></div>
-      </button>
+    <h2 id="reportModalTitle">¿Qué reporte quieres?</h2>
+    <div class="choice-grid">
+      <button type="button" class="choice report-type active" data-report-type="global"><svg class="ic"><use href="#i-home"/></svg><span><b>De toda la casa</b><small>Gastos, personas, saldos y quién paga a quién.</small></span></button>
+      <button type="button" class="choice report-type" data-report-type="member"><svg class="ic"><use href="#i-user"/></svg><span><b>De una persona</b><small>Su parte, lo que debe o recibe y sus movimientos.</small></span></button>
     </div>
-
-    <label id="reportMemberWrap" class="report-member-wrap hidden">
-      Persona
-      <select id="reportMemberSelect"></select>
-    </label>
-
-    <div class="report-preview-note" id="reportPreviewNote">
-      Incluye resumen mensual, categorías, saldos, transferencias pendientes, pagos registrados, gastos y comprobantes.
-    </div>
-
-    <span class="report-language-label">Idioma del PDF</span>
-    <div class="report-lang-actions"><button class="secondary" id="reportSpanish">Español</button><button class="primary" id="reportEnglish">English</button></div>
-    <button class="text-btn wide" id="reportLanguageCancel">Cancelar</button>
+    <label id="reportMemberWrap" class="hidden">Persona<select id="reportMemberSelect"></select></label>
+    <p class="muted small" id="reportPreviewNote"></p>
+    <span class="field-label">Idioma del PDF</span>
+    <div class="two-buttons"><button class="secondary" id="reportSpanish" type="button">Español</button><button class="primary" id="reportEnglish" type="button">English</button></div>
+    <button class="text-btn wide" id="reportLanguageCancel" type="button">Cancelar</button>
   </div>
 </div>
 
 <div id="overlay" class="overlay hidden"></div>
 
-
-<aside id="createChooserSheet" class="sheet small-sheet hidden" data-detent="compact">
+<!-- ============ HOJAS ============ -->
+<aside id="quickActionsSheet" class="sheet hidden" data-detent="compact" role="dialog" aria-modal="true" aria-labelledby="quickActionsTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn createCancel">Cerrar</button><b>¿Qué quieres registrar?</b><span></span></div>
-  <div class="create-choice-grid">
-    <button type="button" data-create-kind="paid"><span>＋</span><div><b>Gasto pagado</b><small>Alguien ya lo pagó</small></div></button>
-    <button type="button" data-create-kind="pending"><span>▤</span><div><b>Cuenta pendiente</b><small>Nadie la pagó todavía</small></div></button>
-    <button type="button" data-create-kind="payment"><span>⇄</span><div><b>Registrar pago</b><small>Abono total o parcial</small></div></button>
-  </div>
-</aside>
-<aside id="quickActionsSheet" class="sheet action-sheet small-sheet hidden" data-detent="compact">
-  <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn quickActionsCancel">Cerrar</button><b>¿Qué quieres hacer?</b><span></span></div>
-  <div class="quick-actions-grid">
-    <button type="button" id="qaExpense"><span class="qa-icon blue">＋</span><div><b>Gasto pagado</b><small>Algo que alguien ya pagó</small></div></button>
-    <button type="button" id="qaPendingBill"><span class="qa-icon peach">▤</span><div><b>Cuenta pendiente</b><small>Nadie la pagó todavía</small></div></button>
-    <button type="button" id="qaSettle"><span class="qa-icon mint">⇄</span><div><b>Registrar pago</b><small>Abono total o parcial entre personas</small></div></button>
-    <button type="button" id="qaReceipt"><span class="qa-icon lilac">▧</span><div><b>Subir comprobante</b><small>Adjúntalo a un nuevo gasto</small></div></button>
-    <button type="button" id="qaRecurring" class="owner-only"><span class="qa-icon peach">↻</span><div><b>Pago recurrente</b><small>Renta, teléfono, servicios…</small></div></button>
-    <button type="button" id="qaCloseMonth" class="owner-only"><span class="qa-icon dark">✓</span><div><b>Cerrar mes</b><small>Revisa el resumen antes de cerrar</small></div></button>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cerrar</button><h2 id="quickActionsTitle">¿Qué quieres registrar?</h2><span></span></div>
+  <div class="action-grid">
+    <button type="button" class="action" id="qaExpense"><span class="action-ic tone-accent"><svg class="ic"><use href="#i-check"/></svg></span><span><b>Gasto pagado</b><small>Alguien ya lo pagó</small></span></button>
+    <button type="button" class="action" id="qaPendingBill"><span class="action-ic tone-warn"><svg class="ic"><use href="#i-clock"/></svg></span><span><b>Cuenta pendiente</b><small>Nadie la ha pagado todavía</small></span></button>
+    <button type="button" class="action" id="qaSettle"><span class="action-ic tone-good"><svg class="ic"><use href="#i-swap"/></svg></span><span><b>Pago entre personas</b><small>Abono total o parcial</small></span></button>
+    <button type="button" class="action" id="qaReceipt"><span class="action-ic tone-info"><svg class="ic"><use href="#i-camera"/></svg></span><span><b>Gasto con foto</b><small>Empieza por el comprobante</small></span></button>
+    <button type="button" class="action manage-only" id="qaRecurring"><span class="action-ic tone-lilac"><svg class="ic"><use href="#i-repeat"/></svg></span><span><b>Pago recurrente</b><small>Renta, teléfono, servicios…</small></span></button>
+    <button type="button" class="action manage-only" id="qaCloseMonth"><span class="action-ic tone-ink"><svg class="ic"><use href="#i-lock"/></svg></span><span><b>Cerrar el mes</b><small>Revisa el resumen antes</small></span></button>
   </div>
 </aside>
 
-<aside id="expenseDetailSheet" class="sheet hidden" data-detent="full">
+<aside id="expenseDetailSheet" class="sheet hidden" data-detent="full" role="dialog" aria-modal="true" aria-labelledby="expenseDetailTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn expenseDetailCancel">Cerrar</button><b>Detalle</b><button class="text-btn accent" id="expenseDetailEditBtn">Editar</button></div>
-  <div id="expenseDetailContent" class="expense-detail-content"></div>
-</aside>
-<aside id="transactionActionsSheet" class="sheet action-sheet small-sheet hidden" data-detent="compact">
-  <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn transactionActionsCancel">Cerrar</button><b>Acciones del gasto</b><span></span></div>
-  <div id="transactionActionsContent" class="quick-actions-grid compact-actions"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cerrar</button><h2 id="expenseDetailTitle">Detalle</h2><button class="text-btn accent" id="expenseDetailEditBtn" type="button">Editar</button></div>
+  <div id="expenseDetailContent" class="sheet-body"></div>
 </aside>
 
-<aside id="settlementPaymentSheet" class="sheet small-sheet hidden" data-detent="medium" aria-modal="true">
+<aside id="transactionActionsSheet" class="sheet hidden" data-detent="compact" role="dialog" aria-modal="true" aria-labelledby="transactionActionsTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn paymentCancel" type="button">Cancelar</button><b id="settlementPaymentTitle">Registrar pago</b><button id="saveSettlementPaymentTop" class="text-btn accent" type="button">Guardar</button></div>
-  <form id="settlementPaymentForm">
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cerrar</button><h2 id="transactionActionsTitle">Acciones</h2><span></span></div>
+  <div id="transactionActionsContent" class="action-grid"></div>
+</aside>
+
+<aside id="settlementPaymentSheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="settlementPaymentTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cancelar</button><h2 id="settlementPaymentTitle">Registrar pago</h2><span></span></div>
+  <form id="settlementPaymentForm" class="sheet-body form">
     <input id="settlementExpenseId" type="hidden">
-    <div id="settlementPaymentContext" class="payment-context"></div>
-    <label id="settlementFromWrap">Quién paga
-      <select id="settlementFrom"></select>
-    </label>
-    <label>A quién
-      <select id="settlementTo"></select>
-    </label>
-    <label>Monto
-      <input id="settlementAmount" inputmode="decimal" placeholder="0.00" required>
-      <small id="settlementAmountHelp" class="field-help"></small>
-    </label>
-    <label>Método
-      <select id="settlementMethod">
-        <option>Transferencia</option><option>Zelle</option><option>Efectivo</option><option>Cheque</option><option>Otro</option>
-      </select>
-    </label>
-    <label>Nota
-      <input id="settlementNote" maxlength="100" placeholder="Opcional">
-    </label>
-    <button class="primary wide" type="submit">Registrar pago</button>
+    <div id="settlementPaymentContext" class="context-box"></div>
+    <div class="amount-field"><span>$</span><input id="settlementAmount" inputmode="decimal" placeholder="0.00" required aria-label="Monto"></div>
+    <small id="settlementAmountHelp" class="field-help"></small>
+    <div class="form-grid">
+      <label id="settlementFromWrap">Quién paga<select id="settlementFrom"></select></label>
+      <label>A quién<select id="settlementTo"></select></label>
+    </div>
+    <label>Método<select id="settlementMethod"><option>Transferencia</option><option>Zelle</option><option>Efectivo</option><option>Cheque</option><option>Otro</option></select></label>
+    <label>Nota <span class="optional">(opcional)</span><input id="settlementNote" maxlength="100" placeholder="Ej. Zelle del viernes"></label>
+    <div class="sheet-footer"><button class="primary wide" type="submit">Registrar pago</button></div>
   </form>
 </aside>
 
-<aside id="expenseSheet" class="sheet hidden" data-detent="full" aria-modal="true">
+<aside id="expenseSheet" class="sheet hidden" data-detent="full" role="dialog" aria-modal="true" aria-labelledby="expenseSheetTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn sheetCancel">Cancelar</button><b id="expenseSheetTitle">Nuevo gasto</b><button id="saveExpenseTop" class="text-btn accent">Guardar</button></div>
-  <form id="expenseForm">
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cancelar</button><h2 id="expenseSheetTitle">Nuevo gasto</h2><span></span></div>
+  <form id="expenseForm" class="sheet-body form" novalidate>
     <input id="expenseId" type="hidden">
-    <div class="amount-wrap"><span>$</span><input id="expenseAmount" inputmode="decimal" placeholder="0.00" required></div>
+    <div class="segmented status-switch" role="tablist" aria-label="Estado de la cuenta">
+      <button type="button" class="payment-status active" data-payment-status="paid"><svg class="ic"><use href="#i-check"/></svg>Ya se pagó</button>
+      <button type="button" class="payment-status" data-payment-status="pending"><svg class="ic"><use href="#i-clock"/></svg>Nadie la ha pagado</button>
+    </div>
+    <div class="amount-field big"><span>$</span><input id="expenseAmount" inputmode="decimal" placeholder="0.00" required aria-label="Monto"></div>
     <label>¿En qué se gastó?<input id="expenseDescription" required maxlength="80" placeholder="Ej. Internet, supermercado…"></label>
-    <div class="form-grid"><label>Fecha<input id="expenseDate" type="date" required></label><label>Categoría<select id="expenseCategory"><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Suscripciones</option><option>Otros</option></select></label></div>
-    <div class="payment-status-card">
-      <span class="eyebrow">ESTADO DE LA CUENTA</span>
-      <div class="payment-status-tabs">
-        <button type="button" class="payment-status active" data-payment-status="paid">✓ Ya fue pagada</button>
-        <button type="button" class="payment-status" data-payment-status="pending">◷ Nadie la pagó todavía</button>
-      </div>
-      <p id="pendingBillHelp" class="hidden">Se guardará como deuda pendiente. No afectará el balance de ninguna persona hasta que marques quién la pagó.</p>
+    <div class="form-grid">
+      <label>Fecha<input id="expenseDate" type="date" required></label>
+      <label>Categoría<select id="expenseCategory" data-cat-select="plain"></select></label>
     </div>
-    <label id="expensePayerWrap">Pagó<select id="expensePayer"></select></label>
+    <label id="expenseDueWrap" class="hidden">Vence <span class="optional">(opcional)</span><input id="expenseDueDate" type="date"></label>
+    <p id="pendingBillHelp" class="info-note hidden">Se guarda como cuenta por pagar. No afecta el saldo de nadie hasta que marques quién la pagó.</p>
+    <label id="expensePayerWrap">¿Quién pagó?<select id="expensePayer"></select></label>
     <fieldset><legend>¿Para quién fue?</legend><div id="participantPicker" class="participant-picker"></div></fieldset>
-    <div class="split-mode">
+    <div class="segmented split-mode" role="tablist" aria-label="Cómo se divide">
       <button type="button" class="split-tab active" data-split="equal">Igual</button>
-      <button type="button" class="split-tab" data-split="amount">Monto</button>
-      <button type="button" class="split-tab" data-split="percent">%</button>
+      <button type="button" class="split-tab" data-split="amount">Por monto</button>
+      <button type="button" class="split-tab" data-split="percent">Por %</button>
     </div>
-    <div id="splitBox" class="split-box"><div><b>División</b><small id="splitHelp">Se divide por igual.</small></div><span id="perPerson">$0.00 c/u</span></div>
-    <label class="coverage-toggle-row"><span><b>Aplicar cobertura familiar</b><small id="coverageExpenseHelp">Usa las reglas de quién cubre económicamente a quién.</small></span><input id="expenseUseCoverage" type="checkbox" checked></label>
-    <div id="coverageExpensePreview" class="coverage-expense-preview hidden"></div>
+    <div id="splitBox" class="split-box"><small id="splitHelp">Se divide por igual.</small><b id="perPerson">$0.00 c/u</b></div>
     <div id="customSplitRows" class="custom-split-rows hidden"></div>
-    <label class="receipt-input">Comprobante <span class="optional">(las fotos se optimizan automáticamente a máximo 200 KB)</span><input id="expenseReceipt" type="file" accept="image/*,application/pdf" multiple></label>
-    <div id="receiptPreview" class="receipt-placeholder"><span>▧</span><div><b>Sin comprobante</b><small>Puedes adjuntar varias fotos o PDFs al mismo gasto.</small></div></div>
-    <label>Nota <span class="optional">(opcional)</span><textarea id="expenseNotes" rows="2" maxlength="300" placeholder="Añade algún detalle…"></textarea></label>
-    <button class="primary wide" type="submit">Guardar gasto</button>
-    <button id="deleteExpense" class="danger wide hidden" type="button">Eliminar gasto</button>
+    <label class="toggle-row"><span><b>Aplicar cobertura familiar</b><small id="coverageExpenseHelp">Usa las reglas de quién cubre a quién.</small></span><input id="expenseUseCoverage" type="checkbox" checked></label>
+    <div id="coverageExpensePreview" class="info-note hidden"></div>
+    <label class="file-drop"><svg class="ic"><use href="#i-camera"/></svg><span><b>Agregar comprobante</b><small>Fotos (se optimizan a máx. 200 KB) o PDF de hasta 350 KB</small></span><input id="expenseReceipt" type="file" accept="image/*,application/pdf" multiple></label>
+    <div id="receiptPreview" class="attachment-list"></div>
+    <label>Nota <span class="optional">(opcional)</span><textarea id="expenseNotes" rows="2" maxlength="300" placeholder="Algún detalle…"></textarea></label>
+    <p id="expenseLockNote" class="info-note warn hidden"><svg class="ic"><use href="#i-lock"/></svg><span></span></p>
+    <div class="sheet-footer">
+      <button id="saveExpenseBtn" class="primary wide" type="submit">Guardar</button>
+      <button id="deleteExpense" class="danger-outline wide hidden" type="button"><svg class="ic"><use href="#i-trash"/></svg>Eliminar gasto</button>
+    </div>
   </form>
 </aside>
 
-<aside id="memberSheet" class="sheet small-sheet hidden" data-detent="medium">
+<aside id="memberSheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="memberSheetTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn memberCancel">Cancelar</button><b id="memberSheetTitle">Agregar miembro</b><button id="saveMemberTop" class="text-btn accent">Guardar</button></div>
-  <form id="memberForm">
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cancelar</button><h2 id="memberSheetTitle">Agregar persona</h2><span></span></div>
+  <form id="memberForm" class="sheet-body form">
     <input id="memberEditId" type="hidden">
-    <div class="admin-member-preview">
-      <div id="memberAdminAvatarPreview" class="avatar profile-preview-avatar">?</div>
-      <div><b id="memberAdminPreviewName">Nuevo miembro</b><small id="memberAdminAccessText">Sin acceso todavía</small></div>
-    </div>
+    <div class="person-preview"><span id="memberAdminAvatarPreview" class="avatar lg">?</span><div><b id="memberAdminPreviewName">Nueva persona</b><small id="memberAdminAccessText">Sin acceso todavía</small></div></div>
     <label>Nombre<input id="memberName" required maxlength="40" placeholder="Nombre"></label>
-    <label>Email <span class="optional">(para darle acceso)</span><input id="memberEmail" type="email" autocomplete="off" placeholder="persona@email.com"></label>
-    <p class="info-note">Al guardar un email, Mi Casa prepara el acceso para esa persona. Si ya tiene cuenta, conserva su UID; si no, podrá activar su acceso con ese mismo email.</p>
-    <div class="admin-member-actions">
-      <button type="button" class="secondary hidden" id="memberResetPassword">Enviar restablecimiento</button>
-      <button type="button" class="secondary hidden" id="memberEditAvatar">Editar avatar</button>
+    <label>Email <span class="optional">(para que pueda entrar)</span><input id="memberEmail" type="email" autocomplete="off" inputmode="email" placeholder="persona@email.com"></label>
+    <label id="memberRoleWrap">Qué puede hacer<select id="memberRole"><option value="member">Miembro · registra gastos y pagos</option><option value="viewer">Solo lectura · solo mira</option><option value="admin">Administrador · gestiona la casa</option></select></label>
+    <p class="info-note">Sin email, la persona aparece en las cuentas pero no entra a la app. Con email, te damos un enlace para que active su acceso.</p>
+    <div class="row-actions">
+      <button type="button" class="secondary hidden" id="memberResetPassword"><svg class="ic"><use href="#i-key"/></svg>Enviar cambio de contraseña</button>
+      <button type="button" class="secondary hidden" id="memberShowInvite"><svg class="ic"><use href="#i-link"/></svg>Enlace de invitación</button>
+      <button type="button" class="secondary hidden" id="memberEditAvatar"><svg class="ic"><use href="#i-user"/></svg>Editar avatar</button>
     </div>
-    <button class="primary wide" type="submit">Guardar miembro</button>
+    <div class="sheet-footer"><button class="primary wide" type="submit">Guardar</button></div>
   </form>
 </aside>
 
-<aside id="profileEditSheet" class="sheet small-sheet hidden" data-detent="medium">
+<aside id="inviteSheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="inviteSheetTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn profileEditCancel">Cancelar</button><b>Personalizar perfil</b><button id="saveProfileTop" class="text-btn accent">Guardar</button></div>
-  <form id="profileEditForm">
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Listo</button><h2 id="inviteSheetTitle">Invitación lista</h2><span></span></div>
+  <div class="sheet-body form">
+    <div class="invite-hero"><svg class="ic"><use href="#i-link"/></svg><div><b id="inviteName">Persona</b><small id="inviteEmail"></small></div></div>
+    <p class="muted small">Mándale este enlace. Al abrirlo verá su email ya escrito y solo tendrá que elegir su contraseña.</p>
+    <label>Enlace<input id="inviteLink" readonly></label>
+    <div class="invite-actions">
+      <button type="button" class="primary" id="inviteShareBtn"><svg class="ic"><use href="#i-share"/></svg>Compartir</button>
+      <button type="button" class="secondary" id="inviteCopyBtn"><svg class="ic"><use href="#i-copy"/></svg>Copiar</button>
+      <a class="secondary btn-link" id="inviteWhatsApp" target="_blank" rel="noopener"><svg class="ic"><use href="#i-message"/></svg>WhatsApp</a>
+      <a class="secondary btn-link" id="inviteMail"><svg class="ic"><use href="#i-mail"/></svg>Correo</a>
+    </div>
+  </div>
+</aside>
+
+<aside id="profileEditSheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="profileEditTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cancelar</button><h2 id="profileEditTitle">Personalizar perfil</h2><span></span></div>
+  <form id="profileEditForm" class="sheet-body form">
     <input id="profileEditMemberId" type="hidden">
-    <div class="profile-editor-preview">
-      <div id="profileAvatarPreview" class="avatar profile-preview-avatar">?</div>
-      <div><b id="profileEditName">Miembro</b><small>Elige una foto, avatar y color.</small></div>
+    <div class="person-preview"><span id="profileAvatarPreview" class="avatar lg">?</span><div><b id="profileEditName">Persona</b><small>Elige foto, avatar y color.</small></div></div>
+    <label class="file-drop"><svg class="ic"><use href="#i-camera"/></svg><span><b>Foto de perfil</b><small>Se recorta y comprime sola</small></span><input id="profilePhotoInput" type="file" accept="image/*"></label>
+    <span class="field-label">Avatar</span>
+    <div id="avatarPresetPicker" class="preset-picker">
+      <button type="button" data-preset="initials" aria-label="Iniciales">AB</button><button type="button" data-preset="🌿" aria-label="Hoja">🌿</button><button type="button" data-preset="🌸" aria-label="Flor">🌸</button><button type="button" data-preset="☀️" aria-label="Sol">☀️</button><button type="button" data-preset="🌙" aria-label="Luna">🌙</button><button type="button" data-preset="🦋" aria-label="Mariposa">🦋</button><button type="button" data-preset="⭐" aria-label="Estrella">⭐</button><button type="button" data-preset="🏡" aria-label="Casa">🏡</button>
     </div>
-    <label class="profile-photo-input">Foto de perfil <span class="optional">(opcional)</span><input id="profilePhotoInput" type="file" accept="image/*"></label>
-    <div class="avatar-presets-label">Avatares</div>
-    <div id="avatarPresetPicker" class="avatar-preset-picker">
-      <button type="button" data-preset="initials">AB</button><button type="button" data-preset="🌿">🌿</button><button type="button" data-preset="🌸">🌸</button><button type="button" data-preset="☀️">☀️</button><button type="button" data-preset="🌙">🌙</button><button type="button" data-preset="🦋">🦋</button><button type="button" data-preset="⭐">⭐</button><button type="button" data-preset="🏡">🏡</button>
-    </div>
-    <div class="avatar-presets-label">Color personal</div>
-    <div id="profileColorPicker" class="profile-color-picker">
-      <button type="button" data-color="#4a90e2"></button><button type="button" data-color="#55b78a"></button><button type="button" data-color="#8b7bd8"></button><button type="button" data-color="#ef9b68"></button><button type="button" data-color="#e77e9f"></button><button type="button" data-color="#4fa8b8"></button>
-    </div>
-    <p class="info-note">Las fotos se comprimen antes de guardarse para mantener Mi Casa ligera.</p>
-    <button class="primary wide" type="submit">Guardar perfil</button>
+    <span class="field-label">Color personal</span>
+    <div id="profileColorPicker" class="color-picker"></div>
+    <div class="sheet-footer"><button class="primary wide" type="submit">Guardar perfil</button></div>
   </form>
 </aside>
 
-<aside id="budgetSheet" class="sheet small-sheet hidden" data-detent="medium">
+<aside id="budgetSheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="budgetSheetTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn budgetCancel">Cancelar</button><b>Presupuestos</b><button id="saveBudgetsTop" class="text-btn accent">Guardar</button></div>
-  <form id="budgetForm"><div class="advanced-budget-panel"><span class="eyebrow">PLAN GENERAL</span><div class="form-grid"><label>Presupuesto global<input id="globalBudgetInput" inputmode="decimal" placeholder="Ej. 2500"></label><label>Límite semanal<input id="weeklyBudgetInput" inputmode="decimal" placeholder="Ej. 650"></label></div><label class="toggle-row"><span><b>Rollover del sobrante</b><small>Conservar lo no usado como referencia del siguiente mes.</small></span><input id="rolloverBudgetInput" type="checkbox"></label></div><div id="budgetRows" class="budget-rows"></div><button class="primary wide" type="submit">Guardar presupuestos</button></form>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cancelar</button><h2 id="budgetSheetTitle">Presupuestos</h2><span></span></div>
+  <form id="budgetForm" class="sheet-body form">
+    <span class="eyebrow">PLAN GENERAL</span>
+    <div class="form-grid"><label>Presupuesto del mes<input id="globalBudgetInput" inputmode="decimal" placeholder="Ej. 2500"></label><label>Límite semanal<input id="weeklyBudgetInput" inputmode="decimal" placeholder="Ej. 650"></label></div>
+    <label class="toggle-row"><span><b>Pasar lo que sobre</b><small>Usar lo no gastado como referencia del mes siguiente.</small></span><input id="rolloverBudgetInput" type="checkbox"></label>
+    <span class="eyebrow">POR CATEGORÍA</span>
+    <div id="budgetRows" class="budget-rows"></div>
+    <div class="sheet-footer"><button class="primary wide" type="submit">Guardar presupuestos</button></div>
+  </form>
 </aside>
 
-<aside id="recurringSheet" class="sheet small-sheet hidden" data-detent="medium">
+<aside id="recurringSheet" class="sheet hidden" data-detent="full" role="dialog" aria-modal="true" aria-labelledby="recurringSheetTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn recurringCancel">Cancelar</button><b>Pago recurrente</b><span></span></div>
-  <form id="recurringForm">
-    <label>Nombre<input id="recurringName" required placeholder="Ej. Ameren"></label>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cancelar</button><h2 id="recurringSheetTitle">Pago recurrente</h2><span></span></div>
+  <form id="recurringForm" class="sheet-body form">
+    <input id="recurringId" type="hidden">
+    <label>Nombre<input id="recurringName" required maxlength="60" placeholder="Ej. Ameren, renta, Netflix"></label>
     <div class="form-grid"><label>Monto<input id="recurringAmount" inputmode="decimal" required placeholder="0.00"></label><label>Día del mes<input id="recurringDay" type="number" min="1" max="31" required value="1"></label></div>
-    <label>Categoría<select id="recurringCategory"><option>Casa</option><option>Servicios</option><option>Teléfono</option><option>Suscripciones</option><option>Otros</option></select></label>
-    <label>Pagador<select id="recurringPayer"></select></label>
-    <button class="primary wide" type="submit">Guardar recurrente</button>
+    <small id="recurringDayHint" class="field-help"></small>
+    <div class="form-grid"><label>Categoría<select id="recurringCategory" data-cat-select="plain"></select></label><label>Quién suele pagar<select id="recurringPayer"></select></label></div>
+    <fieldset><legend>¿Para quién es?</legend><div id="recurringParticipants" class="participant-picker"></div></fieldset>
+    <label class="toggle-row"><span><b>Crear la cuenta pendiente sola</b><small>Cada mes aparece en Cuentas con su fecha de vencimiento.</small></span><input id="recurringAutoCreate" type="checkbox" checked></label>
+    <label class="toggle-row"><span><b>Activo</b><small>Si lo apagas deja de salir en el calendario.</small></span><input id="recurringActive" type="checkbox" checked></label>
+    <div class="sheet-footer"><button class="primary wide" type="submit">Guardar recurrente</button><button class="danger-outline wide hidden" type="button" id="deleteRecurringBtn"><svg class="ic"><use href="#i-trash"/></svg>Eliminar recurrente</button></div>
   </form>
 </aside>
 
-<aside id="memberDetailSheet" class="sheet small-sheet hidden" data-detent="medium">
+<aside id="memberDetailSheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="memberDetailTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn detailCancel">Cerrar</button><b>Perfil financiero</b><span></span></div>
-  <div id="memberDetailContent"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cerrar</button><h2 id="memberDetailTitle">Perfil</h2><span></span></div>
+  <div id="memberDetailContent" class="sheet-body"></div>
 </aside>
 
-
-
-<aside id="notificationSheet" class="sheet small-sheet hidden" data-detent="medium">
+<aside id="notificationSheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="notificationTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn notificationCancel">Cerrar</button><b>Centro de avisos</b><button class="text-btn accent" id="markNotificationsRead">Marcar leído</button></div>
-  <div id="notificationList" class="notification-list"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cerrar</button><h2 id="notificationTitle">Avisos</h2><button class="text-btn accent" id="markNotificationsRead" type="button">Marcar leído</button></div>
+  <div id="notificationList" class="sheet-body feed"></div>
 </aside>
 
-<aside id="dayDetailSheet" class="sheet small-sheet hidden" data-detent="medium">
+<aside id="dayDetailSheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="dayDetailTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn dayDetailCancel">Cerrar</button><b id="dayDetailTitle">Día</b><span></span></div>
-  <div id="dayDetailContent"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cerrar</button><h2 id="dayDetailTitle">Día</h2><span></span></div>
+  <div id="dayDetailContent" class="sheet-body"></div>
 </aside>
 
-<aside id="spaceDetailSheet" class="sheet small-sheet hidden" data-detent="medium">
+<aside id="spaceDetailSheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="spaceDetailTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn spaceDetailCancel">Cerrar</button><b id="spaceDetailTitle">Family Space</b><span></span></div>
-  <div id="spaceDetailContent"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cerrar</button><h2 id="spaceDetailTitle">Categoría</h2><span></span></div>
+  <div id="spaceDetailContent" class="sheet-body"></div>
 </aside>
 
-<aside id="monthCloseSheet" class="sheet small-sheet hidden" data-detent="medium">
+<aside id="monthCloseSheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="monthCloseSheetTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn closeSummaryCancel">Cancelar</button><b>Cierre de mes</b><span></span></div>
-  <div id="monthCloseContent"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cancelar</button><h2 id="monthCloseSheetTitle">Cerrar el mes</h2><span></span></div>
+  <div id="monthCloseContent" class="sheet-body"></div>
 </aside>
 
-
-<aside id="coverageSheet" class="sheet small-sheet hidden" data-detent="full">
+<aside id="coverageSheet" class="sheet hidden" data-detent="full" role="dialog" aria-modal="true" aria-labelledby="coverageSheetTitle">
   <div class="sheet-handle"></div>
-  <div class="sheet-head"><button class="text-btn coverageCancel">Cancelar</button><b>Cobertura familiar</b><button class="text-btn accent" id="saveCoverageTop">Guardar</button></div>
-  <div class="coverage-sheet-intro"><span>♡</span><div><b>Asigna quién asume los gastos de otra persona</b><small>Ejemplo: Alberto cubre a Nela y Marianela. Juana cubre a Timothy.</small></div></div>
-  <div id="coverageRows" class="coverage-rows"></div>
-  <button class="primary wide" id="saveCoverageBottom" type="button">Guardar cobertura</button><button class="secondary wide" id="applyCoverageExisting" type="button">Aplicar estas reglas a gastos existentes</button><p class="info-note">No cambia quién pagó originalmente. Solo recalcula quién asume cada participación.</p>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cancelar</button><h2 id="coverageSheetTitle">Cobertura familiar</h2><span></span></div>
+  <div class="sheet-body form">
+    <div class="info-note"><b>Quién asume los gastos de otra persona.</b> Ejemplo: Alberto cubre a Nela y a Marianela; Juana cubre a Timothy.</div>
+    <div id="coverageRows" class="coverage-rows"></div>
+    <p class="muted small">No cambia quién pagó. Solo recalcula quién asume cada parte.</p>
+    <div class="sheet-footer"><button class="primary wide" id="saveCoverageBottom" type="button">Guardar cobertura</button><button class="secondary wide" id="applyCoverageExisting" type="button">Aplicar a los gastos existentes</button></div>
+  </div>
 </aside>
 
-<aside id="goalSheet" class="sheet small-sheet hidden" data-detent="medium"><div class="sheet-handle"></div><div class="sheet-head"><button class="text-btn goalCancel">Cancelar</button><b>Meta familiar</b><button class="text-btn accent" id="saveGoalTop">Guardar</button></div><form id="goalForm"><input id="goalId" type="hidden"><label>Nombre<input id="goalName" required maxlength="60" placeholder="Ej. Vacaciones"></label><div class="form-grid"><label>Meta $<input id="goalTarget" required inputmode="decimal" placeholder="1500"></label><label>Ahorrado $<input id="goalCurrent" inputmode="decimal" placeholder="0"></label></div><label>Fecha objetivo<input id="goalDate" type="date"></label><label>Icono<select id="goalIcon"><option value="✈">✈ Vacaciones</option><option value="⌂">⌂ Casa</option><option value="▣">▣ Tecnología</option><option value="★">★ Especial</option><option value="♡">♡ Familia</option></select></label><button class="primary wide" type="submit">Guardar meta</button><button class="danger wide hidden" type="button" id="deleteGoalBtn">Eliminar meta</button></form></aside>
-<aside id="automationSheet" class="sheet small-sheet hidden" data-detent="medium"><div class="sheet-handle"></div><div class="sheet-head"><button class="text-btn automationCancel">Cancelar</button><b>Regla inteligente</b><span></span></div><form id="automationForm"><label>Cuando…<select id="automationType"><option value="budget80">una categoría llegue al 80%</option><option value="largeExpense">un gasto supere un monto</option><option value="missingReceipt">un gasto grande no tenga comprobante</option><option value="recurringSoon">falte poco para un recurrente</option></select></label><label>Categoría<select id="automationCategory"><option value="">Cualquier categoría</option><option>Casa</option><option>Comida</option><option>Servicios</option><option>Teléfono</option><option>Transporte</option><option>Salud</option><option>Suscripciones</option><option>Otros</option></select></label><label>Umbral / monto<input id="automationThreshold" inputmode="decimal" placeholder="100"></label><button class="primary wide" type="submit">Activar regla</button></form></aside>
-<aside id="compareSheet" class="sheet small-sheet hidden" data-detent="full"><div class="sheet-handle"></div><div class="sheet-head"><button class="text-btn compareCancel">Cerrar</button><b>Comparar meses</b><span></span></div><div id="compareContent"></div></aside>
-<aside id="globalSearchSheet" class="sheet small-sheet hidden" data-detent="full"><div class="sheet-handle"></div><div class="sheet-head"><button class="text-btn searchCancel">Cerrar</button><b>Buscar en Mi Casa</b><span></span></div><div class="universal-search-wrap"><span>⌕</span><input id="globalSearchInput" placeholder="AT&T, Alberto, comida, PDF, $369…"></div><div id="globalSearchResults" class="global-search-results"></div></aside>
+<aside id="goalSheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="goalSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cancelar</button><h2 id="goalSheetTitle">Meta familiar</h2><span></span></div>
+  <form id="goalForm" class="sheet-body form">
+    <input id="goalId" type="hidden">
+    <label>Nombre<input id="goalName" required maxlength="60" placeholder="Ej. Vacaciones"></label>
+    <div class="form-grid"><label>Meta $<input id="goalTarget" required inputmode="decimal" placeholder="1500"></label><label>Ya ahorrado antes $<input id="goalCurrent" inputmode="decimal" placeholder="0"></label></div>
+    <label>Fecha objetivo <span class="optional">(opcional)</span><input id="goalDate" type="date"></label>
+    <label>Ícono<select id="goalIcon"><option value="✈">✈ Viaje</option><option value="⌂">⌂ Casa</option><option value="▣">▣ Tecnología</option><option value="★">★ Especial</option><option value="♡">♡ Familia</option></select></label>
+    <div class="sheet-footer"><button class="primary wide" type="submit">Guardar meta</button><button class="danger-outline wide hidden" type="button" id="deleteGoalBtn"><svg class="ic"><use href="#i-trash"/></svg>Eliminar meta</button></div>
+  </form>
+</aside>
 
-<div id="attachmentViewer" class="attachment-viewer hidden" aria-hidden="true">
-  <div class="attachment-viewer-backdrop" data-close-preview></div>
-  <section class="attachment-viewer-card" role="dialog" aria-modal="true" aria-label="Vista previa del comprobante">
-    <header><div><span id="attachmentViewerCount">1 de 1</span><b id="attachmentViewerName">Comprobante</b></div><button type="button" id="attachmentViewerClose" aria-label="Cerrar">×</button></header>
-    <div id="attachmentViewerStage" class="attachment-viewer-stage"></div>
-    <footer><button type="button" class="secondary" id="attachmentViewerPrev">‹ Anterior</button><a class="primary attachment-open-original" id="attachmentViewerOpen" target="_blank" rel="noopener">Abrir original</a><button type="button" class="secondary" id="attachmentViewerNext">Siguiente ›</button></footer>
+<aside id="goalDetailSheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="goalDetailTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cerrar</button><h2 id="goalDetailTitle">Meta</h2><button class="text-btn accent manage-only" id="goalDetailEditBtn" type="button">Editar</button></div>
+  <div class="sheet-body">
+    <div id="goalDetailContent"></div>
+    <form id="goalContribForm" class="form write-only contrib-form">
+      <span class="field-label">Agregar aporte</span>
+      <div class="form-grid"><div class="amount-field"><span>$</span><input id="goalContribAmount" inputmode="decimal" placeholder="0.00" aria-label="Monto del aporte"></div><select id="goalContribMember" aria-label="Quién aporta"></select></div>
+      <input id="goalContribNote" maxlength="80" placeholder="Nota (opcional)" aria-label="Nota del aporte">
+      <button class="primary wide" type="submit">Guardar aporte</button>
+    </form>
+    <div id="goalContribList" class="feed"></div>
+  </div>
+</aside>
+
+<aside id="automationSheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="automationSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cancelar</button><h2 id="automationSheetTitle">Regla de aviso</h2><span></span></div>
+  <form id="automationForm" class="sheet-body form">
+    <label>Avísame cuando…<select id="automationType"><option value="budget80">una categoría llegue al 80%</option><option value="largeExpense">un gasto supere un monto</option><option value="missingReceipt">un gasto grande no tenga comprobante</option><option value="recurringSoon">falten pocos días para un recurrente</option></select></label>
+    <label>Categoría<select id="automationCategory" data-cat-select="any"></select></label>
+    <label>Monto o días<input id="automationThreshold" inputmode="decimal" placeholder="100"></label>
+    <div class="sheet-footer"><button class="primary wide" type="submit">Activar regla</button></div>
+  </form>
+</aside>
+
+<aside id="categorySheet" class="sheet hidden" data-detent="medium" role="dialog" aria-modal="true" aria-labelledby="categorySheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cerrar</button><h2 id="categorySheetTitle">Categorías</h2><span></span></div>
+  <form id="categoryForm" class="sheet-body form">
+    <p class="muted small">Las 8 básicas no se pueden quitar. Las tuyas aparecen en todos los formularios y filtros.</p>
+    <div id="categoryChips" class="cat-chips"></div>
+    <div class="form-grid"><input id="newCategoryName" maxlength="24" placeholder="Ej. Mascotas" aria-label="Nueva categoría"><button class="primary" type="submit">Agregar</button></div>
+  </form>
+</aside>
+
+<aside id="compareSheet" class="sheet hidden" data-detent="full" role="dialog" aria-modal="true" aria-labelledby="compareTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cerrar</button><h2 id="compareTitle">Comparar meses</h2><span></span></div>
+  <div id="compareContent" class="sheet-body"></div>
+</aside>
+
+<aside id="globalSearchSheet" class="sheet hidden" data-detent="full" role="dialog" aria-modal="true" aria-labelledby="globalSearchTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button class="text-btn" type="button" data-close-sheet>Cerrar</button><h2 id="globalSearchTitle">Buscar en Mi Casa</h2><span></span></div>
+  <div class="sheet-body">
+    <label class="search-field big"><svg class="ic"><use href="#i-search"/></svg><input id="globalSearchInput" type="search" placeholder="AT&T, Nela, comida, PDF, $369…" aria-label="Buscar"></label>
+    <div id="globalSearchResults" class="feed"></div>
+  </div>
+</aside>
+
+<div id="attachmentViewer" class="viewer hidden" aria-hidden="true">
+  <div class="viewer-backdrop" data-close-preview></div>
+  <section class="viewer-card" role="dialog" aria-modal="true" aria-label="Vista previa del comprobante">
+    <header><div><span id="attachmentViewerCount">1 de 1</span><b id="attachmentViewerName">Comprobante</b></div><button type="button" class="icon-btn" id="attachmentViewerClose" aria-label="Cerrar"><svg class="ic"><use href="#i-x"/></svg></button></header>
+    <div id="attachmentViewerStage" class="viewer-stage"></div>
+    <footer><button type="button" class="secondary" id="attachmentViewerPrev"><svg class="ic"><use href="#i-chev-left"/></svg>Anterior</button><a class="primary btn-link" id="attachmentViewerOpen" target="_blank" rel="noopener"><svg class="ic"><use href="#i-download"/></svg>Abrir original</a><button type="button" class="secondary" id="attachmentViewerNext">Siguiente<svg class="ic"><use href="#i-chev-right"/></svg></button></footer>
   </section>
 </div>
 
