@@ -18,7 +18,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebas
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, collection, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
-const APP_VERSION = "10.0.0";
+const APP_VERSION = "10.1.0";
 const fb = initializeApp(firebaseConfig), auth = getAuth(fb), db = getFirestore(fb);
 
 /* ───────────────────────── helpers ───────────────────────── */
@@ -305,6 +305,22 @@ function settledBalanceData(key = activeMonth) {
   return { ...base, balances, paymentsOut, paymentsIn };
 }
 function settlementPlan(key = activeMonth) { const { balances } = settledBalanceData(key); let debt = Object.entries(balances).filter(([, v]) => v < -.005).map(([id, v]) => ({ id, a: -v })).sort((a, b) => b.a - a.a), cred = Object.entries(balances).filter(([, v]) => v > .005).map(([id, v]) => ({ id, a: v })).sort((a, b) => b.a - a.a), out = [], i = 0, j = 0; while (i < debt.length && j < cred.length) { const a = Math.min(debt[i].a, cred[j].a); out.push({ from: debt[i].id, to: cred[j].id, amount: a }); debt[i].a -= a; cred[j].a -= a; if (debt[i].a < .005) i++; if (cred[j].a < .005) j++; } return out; }
+/* Deudas directas (V10.1): por cada gasto pagado, cada quien le debe a quien pagó por él (con la misma
+   división y cobertura de siempre). Se cruza SOLO dentro de cada pareja y se descuentan los pagos entre esa
+   pareja. «Simplificar pagos» usa settlementPlan(), que cruza las deudas de todos para hacer menos transferencias. */
+let balanceMode = safeGet("miCasaBalanceMode") === "simplified" ? "simplified" : "direct";
+function directPlan(key = activeMonth) {
+  const ids = new Set(members.map(m => m.id)), pair = {}, why = {};
+  const add = (a, b, v) => { if (!ids.has(a) || !ids.has(b) || a === b) return; const k = a < b ? `${a}|${b}` : `${b}|${a}`; pair[k] = (pair[k] || 0) + (a < b ? v : -v); };
+  for (const e of paidMonthExpenses(key)) for (const [id, v] of Object.entries(effectiveExpenseShares(e))) {
+    const amt = Number(v || 0); if (id === e.payerId || !(amt > 0)) continue;
+    add(id, e.payerId, amt); (why[`${id}>${e.payerId}`] ??= []).push({ description: e.description, amount: amt });
+  }
+  for (const s of settlements) if (s.month === key && s.status === "paid") add(s.from, s.to, -Number(s.amount || 0));
+  return Object.entries(pair).filter(([, v]) => Math.abs(v) > .005).map(([k, v]) => { const [a, b] = k.split("|"), from = v > 0 ? a : b, to = v > 0 ? b : a; return { from, to, amount: Math.abs(v), items: (why[`${from}>${to}`] || []).sort((x, y) => y.amount - x.amount) }; }).sort((x, y) => y.amount - x.amount);
+}
+const balancePlan = (key = activeMonth) => balanceMode === "simplified" ? settlementPlan(key) : directPlan(key);
+function myPlanTotals(key = activeMonth) { const mm = myMember(), plan = balancePlan(key), sum = l => l.reduce((s, p) => s + p.amount, 0); return { owed: mm ? sum(plan.filter(p => p.to === mm.id)) : 0, owe: mm ? sum(plan.filter(p => p.from === mm.id)) : 0 }; }
 function totalBudget() { return allCategories().reduce((s, c) => s + Number(budgets[`${activeMonth}_${c}`]?.limit || 0), 0); }
 function catTotals() { const o = {}; monthExpenses().forEach(e => o[e.category] = (o[e.category] || 0) + Number(e.amount || 0)); return o; }
 function startOfLocalDay(d = new Date()) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
@@ -331,7 +347,7 @@ function currentWeekExpenses() { const t = today(), start = addDays(t, -6); retu
 const topCategoryFor = ex => Object.entries(catsFor(ex)).sort((a, b) => b[1] - a[1])[0] || null;
 const recurringDay = (r, key = activeMonth) => Math.min(Math.max(1, Number(r.day) || 1), daysInMonth(key));
 function nextRecurringSummary() { const d = new Date().getDate(), act = recurrings.filter(r => r.active !== false), up = act.filter(r => recurringDay(r, nowMonth()) >= d).sort((a, b) => a.day - b.day)[0] || act.sort((a, b) => a.day - b.day)[0]; return up ? { title: up.name, sub: `Día ${recurringDay(up, nowMonth())} · ${money(up.amount)}` } : { title: "—", sub: "Sin recurrentes" }; }
-function financialHealth() { const limit = globalBudgetLimit(), forecast = forecastMonthTotal(), pending = settlementPlan().length; let score = 100; const reasons = []; if (limit) { if (forecast > limit * 1.15) { score -= 35; reasons.push("proyección sobre presupuesto"); } else if (forecast > limit) { score -= 22; reasons.push("proyección ajustada"); } else reasons.push("presupuesto bajo control"); } else { score -= 10; reasons.push("sin presupuesto global"); } if (pending > 3) { score -= 16; reasons.push(`${pending} saldos pendientes`); } else if (pending) { score -= 7; reasons.push(`${pending} saldos por resolver`); } score = Math.max(20, Math.min(100, score)); return { score, label: score >= 85 ? "Dentro del plan" : score >= 68 ? "Atención moderada" : "Necesita atención", reasons }; }
+function financialHealth() { const limit = globalBudgetLimit(), forecast = forecastMonthTotal(), pending = balancePlan().length; let score = 100; const reasons = []; if (limit) { if (forecast > limit * 1.15) { score -= 35; reasons.push("proyección sobre presupuesto"); } else if (forecast > limit) { score -= 22; reasons.push("proyección ajustada"); } else reasons.push("presupuesto bajo control"); } else { score -= 10; reasons.push("sin presupuesto global"); } if (pending > 3) { score -= 16; reasons.push(`${pending} saldos pendientes`); } else if (pending) { score -= 7; reasons.push(`${pending} saldos por resolver`); } score = Math.max(20, Math.min(100, score)); return { score, label: score >= 85 ? "Dentro del plan" : score >= 68 ? "Atención moderada" : "Necesita atención", reasons }; }
 function automationLabel(r) { if (r.type === "budget80") return `${r.category || "Una categoría"} al 80% del presupuesto`; if (r.type === "largeExpense") return `Gasto mayor a ${money(r.threshold || 100)}`; if (r.type === "missingReceipt") return `Pedir comprobante sobre ${money(r.threshold || 100)}`; if (r.type === "recurringSoon") return `Avisar ${Number(r.threshold || 3)} días antes de un recurrente`; return "Regla"; }
 
 /* ───────────────────────── status ───────────────────────── */
@@ -383,16 +399,16 @@ function homeTitle() { const first = (myMember()?.name || me?.displayName || "")
 
 /* ── Inicio · banda 1: resumen ── */
 function renderHero() {
-  const homeEx = rangeExpenses(), homeTotal = totalsFor(homeEx), settled = settledBalanceData(), mine = myMember(), myBal = mine ? settled.balances[mine.id] || 0 : 0;
-  const yourPart = !isOwner() && homeRange === "month" && mine;
-  const heroValue = yourPart ? Number(settled.share[mine.id] || 0) : homeTotal;
+  const homeEx = rangeExpenses(), homeTotal = totalsFor(homeEx), settled = settledBalanceData(), mm = myMember();
+  const yourPart = !isOwner() && homeRange === "month" && mm;
+  const heroValue = yourPart ? Number(settled.share[mm.id] || 0) : homeTotal;
   $("#heroKicker").textContent = `${yourPart ? "TU PARTE" : "GASTO FAMILIAR"} · ${rangeLabel()}`;
   const failed = !!loadErrors.expenses;
   $("#monthTotal").innerHTML = failed ? "—" : moneyHTML(heroValue);
   const monthTotalValue = totalsFor(monthExpenses()), prevTotal = totalsFor(monthExpenses(prevMonthKey(activeMonth))), top = topCategoryFor(homeEx);
   const trend = prevTotal ? `${monthTotalValue <= prevTotal ? "↓" : "↑"} ${Math.abs((monthTotalValue - prevTotal) / prevTotal * 100).toFixed(0)}% vs. ${monthLabel(prevMonthKey(activeMonth)).split(" ")[0]}` : "Primer mes con datos";
   $("#monthTrend").textContent = failed ? "No se pudieron cargar los gastos" : [trend, plural(homeEx.length, "movimiento", "movimientos"), top ? `${top[0]} lidera` : ""].filter(Boolean).join(" · ");
-  $("#owedToMe").innerHTML = moneyHTML(Math.max(0, myBal)); $("#iOwe").innerHTML = moneyHTML(Math.max(0, -myBal));
+  const mine = myPlanTotals(); $("#owedToMe").innerHTML = moneyHTML(mine.owed); $("#iOwe").innerHTML = moneyHTML(mine.owe);
   const tb = globalBudgetLimit(), pct = tb ? monthTotalValue / tb * 100 : 0;
   $("#budgetUsed").textContent = tb ? `${Math.round(pct)}% de ${money(tb).replace(".00", "")}` : "Sin límite";
   $("#budgetBar").style.width = `${Math.min(100, pct)}%`; $("#budgetBar").parentElement.classList.toggle("over", pct > 100); $("#budgetBar").parentElement.classList.toggle("near", pct >= 80 && pct <= 100);
@@ -437,7 +453,7 @@ function billGroups() {
 function previousOpenMonths() {
   const keys = new Set(expenses.filter(e => !isPendingBill(e) && e.date).map(e => monthKey(e.date)));
   return [...keys].filter(k => k !== activeMonth && k <= nowMonth()).sort().reverse().slice(0, 12)
-    .map(key => { const plan = settlementPlan(key); return { key, plan, total: plan.reduce((s, p) => s + p.amount, 0) }; })
+    .map(key => { const plan = balancePlan(key); return { key, plan, total: plan.reduce((s, p) => s + p.amount, 0) }; })
     .filter(x => x.plan.length).slice(0, 6);
 }
 function gotoMonth(key, view = "balances") { activeMonth = key; renderAll(); go(view); }
@@ -447,7 +463,7 @@ function buildTodayItems() {
   if (g.overdue.length) items.push({ tone: "bad", icon: "alert", title: `${plural(g.overdue.length, "cuenta vencida", "cuentas vencidas")}`, sub: `${money(sum(g.overdue))} · ${g.overdue[0].description} venció el ${fmtDate(g.overdue[0].dueDate)}`, run: () => go("bills") });
   if (g.week.length) items.push({ tone: "warn", icon: "clock", title: `${plural(g.week.length, "cuenta vence", "cuentas vencen")} esta semana`, sub: `${money(sum(g.week))} · la próxima: ${g.week[0].description}, ${fmtDate(g.week[0].dueDate)}`, run: () => go("bills") });
   if (g.noDue.length) items.push({ tone: "warn", icon: "bill", title: `${plural(g.noDue.length, "cuenta sin pagar", "cuentas sin pagar")}`, sub: `${money(sum(g.noDue))} por pagar`, run: () => go("bills") });
-  const plan = settlementPlan(), mine = mm ? plan.filter(p => p.from === mm.id || p.to === mm.id) : [];
+  const plan = balancePlan(), mine = mm ? plan.filter(p => p.from === mm.id || p.to === mm.id) : [];
   mine.forEach(p => {
     if (p.from === mm.id) items.push({ tone: "bad", icon: "swap", title: `Le debes ${money(p.amount)} a ${member(p.to).name}`, sub: canWrite() ? "Toca para registrar el pago" : "Saldos de este mes", run: () => canWrite() ? openSettlementPayment({ ...p, maxAmount: p.amount }) : go("balances") });
     else items.push({ tone: "good", icon: "swap", title: `${member(p.from).name} te debe ${money(p.amount)}`, sub: "Cuando te pague, regístralo en Saldos", run: () => go("balances") });
@@ -633,13 +649,20 @@ function renderBills() {
 $("#newPendingBillBtn").onclick = () => openExpense(null, { status: "pending" });
 
 /* ───────────────────────── Saldos ───────────────────────── */
+function flowWhy(p) {
+  if (!p.items) return `<small class="flow-why">Deudas cruzadas para hacer menos transferencias.</small>`;
+  const top = p.items.slice(0, 2).map(x => `${esc(x.description)} (${money(x.amount)})`).join(", "), more = p.items.length - 2, gross = p.items.reduce((s, x) => s + x.amount, 0);
+  return `<small class="flow-why">${p.items.length ? `Por ${top}${more > 0 ? ` y ${plural(more, "gasto más", "gastos más")}` : ""}` : "Saldo a favor de pagos anteriores"}${p.items.length && Math.abs(gross - p.amount) > .005 ? `, ya descontado lo que se deben entre ellos y los pagos` : ""}.</small>`;
+}
 function flowCard(p, i, withButton) {
   const from = member(p.from), to = member(p.to);
-  return `<div class="flow" style="--from:${esc(personColor(from))};--to:${esc(personColor(to))}"><div class="flow-person">${memberAvatar(from, "lg")}<b>${esc(from.name)}</b><small>paga</small></div><div class="flow-mid"><span class="flow-line"></span><strong class="money">${moneyHTML(p.amount)}</strong>${withButton ? `<button class="secondary small" type="button" data-settle-index="${i}">${ic("check")}Registrar pago</button>` : ""}</div><div class="flow-person">${memberAvatar(to, "lg")}<b>${esc(to.name)}</b><small>recibe</small></div></div>`;
+  return `<div class="flow" style="--from:${esc(personColor(from))};--to:${esc(personColor(to))}"><div class="flow-person">${memberAvatar(from, "lg")}<b>${esc(from.name)}</b><small>paga</small></div><div class="flow-mid"><span class="flow-line"></span><strong class="money">${moneyHTML(p.amount)}</strong>${withButton ? `<button class="secondary small" type="button" data-settle-index="${i}">${ic("check")}Registrar pago</button>` : ""}</div><div class="flow-person">${memberAvatar(to, "lg")}<b>${esc(to.name)}</b><small>recibe</small></div>${flowWhy(p)}</div>`;
 }
 function renderBalances() {
-  const plan = settlementPlan(), mm = myMember(), { balances } = settledBalanceData(), mine = mm ? balances[mm.id] || 0 : 0, closed = isMonthClosed(activeMonth);
-  $("#balancesReceivable").innerHTML = moneyHTML(Math.max(0, mine)); $("#balancesPayable").innerHTML = moneyHTML(Math.max(0, -mine));
+  const plan = balancePlan(), mine = myPlanTotals(), closed = isMonthClosed(activeMonth);
+  $("#balancesReceivable").innerHTML = moneyHTML(mine.owed); $("#balancesPayable").innerHTML = moneyHTML(mine.owe);
+  $$("[data-balance-mode]").forEach(b => { const on = b.dataset.balanceMode === balanceMode; b.classList.toggle("active", on); b.setAttribute("aria-selected", String(on)); });
+  $("#balanceModeText").textContent = balanceMode === "direct" ? "Cada quien le paga a quien puso el dinero por él." : "Las deudas se cruzan entre todos para hacer la menor cantidad de transferencias. Cada quien termina igual, pero puede pagarle a otra persona.";
   const paidS = settlements.filter(s => s.month === activeMonth && s.status === "paid");
   $("#balancesPaidMonth").innerHTML = moneyHTML(paidS.reduce((s, x) => s + Number(x.amount || 0), 0));
   $("#settlementList").innerHTML = plan.length ? plan.map((p, i) => flowCard(p, i, canWrite() && !closed)).join("") : `<div class="all-good">${ic("checks")}<div><b>Todo saldado en ${esc(monthLabel(activeMonth).split(" ")[0])}</b><small>No hay transferencias pendientes.</small></div></div>`;
@@ -656,7 +679,8 @@ function renderBalances() {
     try { await deleteDoc(doc(db, "households", householdId, "settlements", s.id)); toast("Pago borrado"); } catch (err) { console.warn(err); toast("No se pudo borrar el pago."); }
   });
 }
-$("#balancesRecordPayment").onclick = () => { const p = settlementPlan()[0]; openSettlementPayment(p ? { ...p, maxAmount: p.amount } : {}); };
+$$("[data-balance-mode]").forEach(b => b.addEventListener("click", () => { balanceMode = b.dataset.balanceMode === "simplified" ? "simplified" : "direct"; safeSet("miCasaBalanceMode", balanceMode); renderAll(); }));
+$("#balancesRecordPayment").onclick = () => { const p = balancePlan()[0]; openSettlementPayment(p ? { ...p, maxAmount: p.amount } : {}); };
 function memberOptions(selected = "") { return members.map(m => `<option value="${esc(m.id)}" ${m.id === selected ? "selected" : ""}>${esc(m.name)}</option>`).join(""); }
 function openSettlementPayment(opts = {}) {
   if (!canWrite()) { toast("Tu acceso es de solo lectura."); return; }
@@ -927,7 +951,7 @@ function openQuickActions() { if (!canWrite()) { toast("Tu acceso es de solo lec
 ["#newExpenseBtn", "#mobileAdd"].forEach(id => $(id).onclick = openQuickActions);
 $("#qaExpense").onclick = () => openExpense(null, { status: "paid" });
 $("#qaPendingBill").onclick = () => openExpense(null, { status: "pending" });
-$("#qaSettle").onclick = () => { const p = settlementPlan()[0]; closeSheets(); openSettlementPayment(p ? { ...p, maxAmount: p.amount } : {}); };
+$("#qaSettle").onclick = () => { const p = balancePlan()[0]; closeSheets(); openSettlementPayment(p ? { ...p, maxAmount: p.amount } : {}); };
 $("#qaReceipt").onclick = () => { openExpense(null, { status: "paid" }); setTimeout(() => $("#expenseReceipt").click(), 260); };
 $("#qaRecurring").onclick = () => openRecurringEditor();
 $("#qaCloseMonth").onclick = () => { closeSheets(); activeMonth = nowMonth(); renderAll(); go("month"); openMonthCloseSummary(); };
@@ -961,7 +985,7 @@ function openTransactionActions(e) {
 function lastSeenText(m) { const s = m.lastSeenAt?.seconds; if (!s) return ""; const mins = Math.round((Date.now() - s * 1000) / 60000); if (mins < 2) return "activo ahora"; if (mins < 60) return `visto hace ${mins} min`; const h = Math.round(mins / 60); if (h < 24) return `visto hace ${h} h`; return `visto hace ${plural(Math.round(h / 24), "día", "días")}`; }
 function accessText(m) { if (m.accessPaused) return "Acceso en pausa"; if (m.authUid) return ["Con acceso", lastSeenText(m)].filter(Boolean).join(" · "); if (m.email) return "Invitación pendiente"; return "Sin acceso a la app"; }
 function renderFamily() {
-  const { paid, share, balances } = settledBalanceData(), plan = settlementPlan();
+  const { paid, share, balances } = settledBalanceData(), plan = balancePlan();
   $("#familyHubTitle").textContent = household?.name || "Mi Casa";
   $("#familyHubTotal").innerHTML = moneyHTML(totalsFor(monthExpenses()));
   $("#familyHubStatus").textContent = plan.length ? `${plural(members.length, "persona", "personas")} · ${plural(plan.length, "pago por resolver", "pagos por resolver")}` : `${plural(members.length, "persona", "personas")} · todo al día`;
@@ -989,10 +1013,12 @@ function renderAdmin() {
   $$("#adminUsers [data-reset-member]").forEach(b => b.onclick = () => sendReset(member(b.dataset.resetMember).email));
   $$("#adminUsers [data-pause-member]").forEach(b => b.onclick = () => togglePause(b.dataset.pauseMember));
   $$("#adminUsers [data-remove-member]").forEach(b => b.onclick = () => removeMember(b.dataset.removeMember));
-  const linked = members.filter(m => m.authUid), ready = linked.filter(m => m.authUid === household?.ownerId || Number(String(m.appVersion || "0").split(".")[0]) >= 10), missing = linked.filter(m => !ready.includes(m));
+  // lista para las reglas V10 = su cuenta ya está enlazada por users.memberId (activó con invitación: joinedAt),
+  // su ficha usa el mismo UID, o ya abrió la V10 (que completa el enlace)
+  const linked = members.filter(m => m.authUid), ready = linked.filter(m => m.authUid === household?.ownerId || m.id === m.authUid || !!m.joinedAt || Number(String(m.appVersion || "0").split(".")[0]) >= 10), missing = linked.filter(m => !ready.includes(m));
   $("#accessReadiness").innerHTML = `<div class="card-head"><h3>${ic("shield")}Reglas de seguridad</h3><span class="count-pill ${missing.length ? "warn" : "good"}">${ready.length} de ${linked.length}</span></div>
-    <p class="muted small">Hoy los permisos de cada rol se aplican dentro de la app. Para que Firebase también los haga cumplir, hay que publicar las reglas nuevas (archivo <b>firestore.rules</b>, pasos en <b>DEPLOY.md</b>). Antes, cada persona con acceso debe abrir esta versión una vez.</p>
-    ${missing.length ? `<p class="readiness warn">${ic("clock")}<span>${ready.length} de ${linked.length} personas listas. Falta que abran la versión nueva: <b>${missing.map(m => esc(m.name)).join(", ")}</b>.</span></p>` : `<p class="readiness good">${ic("check")}<span>${ready.length} de ${linked.length} personas listas. Ya puedes publicar las reglas.</span></p>`}`;
+    <p class="muted small">Los permisos de cada rol ya se aplican en la app. Para que Firebase también los haga cumplir (y quien quites de la casa pierda el acceso de verdad), publica las reglas nuevas: archivo <b>firestore.rules</b>, pasos en <b>DEPLOY.md</b>.</p>
+    ${missing.length ? `<p class="readiness warn">${ic("clock")}<span>${ready.length} de ${linked.length} personas listas. Falta que abran la versión nueva: <b>${missing.map(m => esc(m.name)).join(", ")}</b>. Si no la abren, después de publicar las reglas esa persona verá «Acceso pendiente» hasta que entre una vez.</span></p>` : `<p class="readiness good">${ic("check")}<span>${ready.length} de ${linked.length} personas listas. Ya puedes publicar las reglas.</span></p>`}`;
 }
 async function sendReset(email) { if (!email) { toast("Esa persona no tiene email."); return; } try { await sendPasswordResetEmail(auth, email); toast(`Enviamos un enlace a ${email} para cambiar su contraseña.`); } catch (err) { console.warn(err); toast("No se pudo enviar. ¿Esa persona ya activó su acceso?"); } }
 async function togglePause(id) {
@@ -1220,7 +1246,7 @@ function renderCalendar() {
 }
 function renderSubscriptions() { const a = recurrings.filter(r => r.active !== false), m = a.reduce((s, r) => s + Number(r.amount || 0), 0); $("#subscriptionMonthly").innerHTML = moneyHTML(m); $("#subscriptionYearly").innerHTML = moneyHTML(m * 12); }
 function renderMonthClose() {
-  const key = activeMonth, ex = monthExpenses(key), paidEx = ex.filter(e => !isPendingBill(e)), pending = pendingMonthBills(key), plan = settlementPlan(key), missing = paidEx.filter(e => !expenseAttachments(e).length), paidS = settlements.filter(s => s.month === key && s.status === "paid"), closed = isMonthClosed(key), info = closings[key] || {};
+  const key = activeMonth, ex = monthExpenses(key), paidEx = ex.filter(e => !isPendingBill(e)), pending = pendingMonthBills(key), plan = balancePlan(key), missing = paidEx.filter(e => !expenseAttachments(e).length), paidS = settlements.filter(s => s.month === key && s.status === "paid"), closed = isMonthClosed(key), info = closings[key] || {};
   $("#monthCloseTitle").textContent = cap(monthLabel(key));
   const st = $("#monthCloseStatus"); st.textContent = closed ? "Cerrado" : "Abierto"; st.className = `status-badge ${closed ? "closed" : "open"}`;
   $("#monthCloseMetrics").innerHTML = `<div><span>Gastos pagados</span><b class="money">${moneyHTML(totalsFor(paidEx))}</b></div><div><span>Cuentas pendientes</span><b>${pending.length}</b></div><div><span>Pagos entre personas</span><b class="money">${moneyHTML(paidS.reduce((s, x) => s + Number(x.amount || 0), 0))}</b></div><div><span>Transferencias por hacer</span><b>${plan.length}</b></div>`;
@@ -1240,7 +1266,7 @@ $("#closeMonthBtn").onclick = async () => {
 };
 function openMonthCloseSummary() {
   if (!canManage()) return;
-  const key = activeMonth, ex = monthExpenses(key), paidEx = ex.filter(e => !isPendingBill(e)), total = totalsFor(paidEx), cats = catsFor(paidEx), top = Object.entries(cats).sort((a, b) => b[1] - a[1])[0], { paid } = calc(key), payer = Object.entries(paid).sort((a, b) => b[1] - a[1])[0], plan = settlementPlan(key), pending = pendingMonthBills(key), missing = paidEx.filter(e => !expenseAttachments(e).length);
+  const key = activeMonth, ex = monthExpenses(key), paidEx = ex.filter(e => !isPendingBill(e)), total = totalsFor(paidEx), cats = catsFor(paidEx), top = Object.entries(cats).sort((a, b) => b[1] - a[1])[0], { paid } = calc(key), payer = Object.entries(paid).sort((a, b) => b[1] - a[1])[0], plan = balancePlan(key), pending = pendingMonthBills(key), missing = paidEx.filter(e => !expenseAttachments(e).length);
   const warn = (n, txt, view) => `<button type="button" class="check-row ${n ? "warn" : "ok"}" ${n ? `data-close-go="${view}"` : "disabled"}>${ic(n ? "alert" : "check")}<span>${txt}</span>${n ? ic("chev-right", "chev") : ""}</button>`;
   $("#monthCloseSheetTitle").textContent = `Cerrar ${monthLabel(key).split(" ")[0]}`;
   $("#monthCloseContent").innerHTML = `<div class="close-hero"><span>${esc(cap(monthLabel(key)))}</span><strong class="money">${moneyHTML(total)}</strong><small>${plural(paidEx.length, "gasto pagado", "gastos pagados")}</small></div>
@@ -1427,17 +1453,17 @@ function proReportShell(body, title, subtitle, en = false) {
 }
 function transfersHTML(list, en) { return list.length ? `<div class="transfer-grid">${list.map(t => `<div class="transfer"><div><b>${esc(member(t.from).name)}</b><small>${en ? "pays" : "paga"}</small></div><div class="amount">→<b>${money(t.amount)}</b></div><div class="to"><b>${esc(member(t.to).name)}</b><small>${en ? "receives" : "recibe"}</small></div></div>`).join("")}</div>` : `<div class="report-empty">${en ? "No pending transfers" : "No hay transferencias pendientes"}</div>`; }
 function globalReportHTML(en = false) {
-  const { paid, share, balances, paymentsOut } = settledBalanceData(), ex = monthExpenses().slice().sort((a, b) => String(a.date).localeCompare(String(b.date))), plan = settlementPlan(), cats = {};
+  const { paid, share, balances, paymentsOut } = settledBalanceData(), ex = monthExpenses().slice().sort((a, b) => String(a.date).localeCompare(String(b.date))), plan = balancePlan(), cats = {};
   const paidEx = ex.filter(e => !isPendingBill(e)); paidEx.forEach(e => cats[e.category] = (cats[e.category] || 0) + Number(e.amount || 0));
   const total = totalsFor(paidEx), pendingEx = ex.filter(isPendingBill), pending = totalsFor(pendingEx);
   const people = `<table class="report-table"><thead><tr><th>${en ? "Person" : "Persona"}</th><th class="num">${en ? "Paid expenses" : "Pagó gastos"}</th><th class="num">${en ? "Responsibility" : "Su parte"}</th><th class="num">${en ? "Payments made" : "Pagos hechos"}</th><th class="num">${en ? "Current balance" : "Saldo actual"}</th></tr></thead><tbody>${members.map(m => `<tr><td><b>${esc(m.name)}</b></td><td class="num">${money(paid[m.id] || 0)}</td><td class="num">${money(share[m.id] || 0)}</td><td class="num">${money(paymentsOut[m.id] || 0)}</td><td class="num ${(balances[m.id] || 0) >= 0 ? "positive" : "negative"}">${(balances[m.id] || 0) >= 0 ? "+" : ""}${money(balances[m.id] || 0)}</td></tr>`).join("")}</tbody></table>`;
   const categories = Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<div class="category"><span>${esc(c || "Otros")}</span><b>${money(v)}</b></div>`).join("");
   const receipts = ex.map(reportReceiptImages).join("") || `<div class="report-empty">${en ? "No image receipts attached" : "No hay imágenes de comprobantes"}</div>`;
-  const body = `<section class="section keep"><div class="metrics"><div class="metric"><span>${en ? "Paid expenses" : "Gastos pagados"}</span><b>${money(total)}</b><small>${paidEx.length} ${en ? "expenses" : "gastos"}</small></div><div class="metric"><span>${en ? "Pending bills" : "Cuentas pendientes"}</span><b>${money(pending)}</b><small>${pendingEx.length} ${en ? "unpaid" : "sin pagar"}</small></div><div class="metric"><span>${en ? "Payments recorded" : "Pagos registrados"}</span><b>${money(settlements.filter(s => s.month === activeMonth && s.status === "paid").reduce((sum, s) => sum + Number(s.amount || 0), 0))}</b><small>${en ? "applied to balances" : "aplicados a saldos"}</small></div><div class="metric"><span>${en ? "Transfers" : "Transferencias"}</span><b>${plan.length}</b><small>${en ? "still pending" : "aún pendientes"}</small></div></div></section><section class="section keep"><h2>${en ? "Who pays whom" : "Quién paga a quién"}</h2>${transfersHTML(plan, en)}</section><section class="section"><h2>${en ? "Summary by person" : "Resumen por persona"}</h2>${people}</section><section class="section keep"><h2>${en ? "Spending by category" : "Gastos por categoría"}</h2><div class="category-grid">${categories || `<div class="report-empty">${en ? "No paid expenses" : "Sin gastos pagados"}</div>`}</div></section><section class="section"><h2>${en ? "Pending bills" : "Cuentas pendientes de pago"}</h2>${pendingEx.length ? reportExpenseRows(pendingEx, en) : `<div class="report-empty">${en ? "No pending bills" : "No hay cuentas pendientes"}</div>`}</section><section class="section page-break"><h2>${en ? "Expense detail" : "Detalle completo de gastos"}</h2>${reportExpenseRows(ex, en)}</section><section class="section page-break"><h2>${en ? "Receipts & invoices" : "Comprobantes y facturas"}</h2><div class="receipt-grid">${receipts}</div></section>`;
+  const body = `<section class="section keep"><div class="metrics"><div class="metric"><span>${en ? "Paid expenses" : "Gastos pagados"}</span><b>${money(total)}</b><small>${paidEx.length} ${en ? "expenses" : "gastos"}</small></div><div class="metric"><span>${en ? "Pending bills" : "Cuentas pendientes"}</span><b>${money(pending)}</b><small>${pendingEx.length} ${en ? "unpaid" : "sin pagar"}</small></div><div class="metric"><span>${en ? "Payments recorded" : "Pagos registrados"}</span><b>${money(settlements.filter(s => s.month === activeMonth && s.status === "paid").reduce((sum, s) => sum + Number(s.amount || 0), 0))}</b><small>${en ? "applied to balances" : "aplicados a saldos"}</small></div><div class="metric"><span>${en ? "Transfers" : "Transferencias"}</span><b>${plan.length}</b><small>${en ? "still pending" : "aún pendientes"}</small></div></div></section><section class="section keep"><h2>${en ? "Who pays whom" : "Quién paga a quién"}</h2><p style="margin:-4px 0 8px;color:#8a7b6f">${balanceMode === "direct" ? (en ? "Direct debts: each person pays whoever paid for them." : "Deudas directas: cada quien le paga a quien pagó por él.") : (en ? "Simplified: debts crossed to minimize transfers." : "Simplificado: deudas cruzadas para hacer menos transferencias.")}</p>${transfersHTML(plan, en)}</section><section class="section"><h2>${en ? "Summary by person" : "Resumen por persona"}</h2>${people}</section><section class="section keep"><h2>${en ? "Spending by category" : "Gastos por categoría"}</h2><div class="category-grid">${categories || `<div class="report-empty">${en ? "No paid expenses" : "Sin gastos pagados"}</div>`}</div></section><section class="section"><h2>${en ? "Pending bills" : "Cuentas pendientes de pago"}</h2>${pendingEx.length ? reportExpenseRows(pendingEx, en) : `<div class="report-empty">${en ? "No pending bills" : "No hay cuentas pendientes"}</div>`}</section><section class="section page-break"><h2>${en ? "Expense detail" : "Detalle completo de gastos"}</h2>${reportExpenseRows(ex, en)}</section><section class="section page-break"><h2>${en ? "Receipts & invoices" : "Comprobantes y facturas"}</h2><div class="receipt-grid">${receipts}</div></section>`;
   return proReportShell(body, en ? "Household Report" : "Reporte global", monthLabel(activeMonth), en);
 }
 function memberReportHTML(memberId, en = false) {
-  const m = member(memberId), { paid, share, balances, paymentsOut } = settledBalanceData(), all = monthExpenses().filter(e => e.payerId === memberId || (e.participantIds || []).includes(memberId)).sort((a, b) => String(a.date).localeCompare(String(b.date))), mine = settlementPlan().filter(t => t.from === memberId || t.to === memberId);
+  const m = member(memberId), { paid, share, balances, paymentsOut } = settledBalanceData(), all = monthExpenses().filter(e => e.payerId === memberId || (e.participantIds || []).includes(memberId)).sort((a, b) => String(a.date).localeCompare(String(b.date))), mine = balancePlan().filter(t => t.from === memberId || t.to === memberId);
   const receipts = all.map(reportReceiptImages).join("") || `<div class="report-empty">${en ? "No image receipts attached" : "No hay imágenes de comprobantes"}</div>`;
   const body = `<section class="section keep"><div class="metrics"><div class="metric"><span>${en ? "Paid" : "Pagó"}</span><b>${money(paid[memberId] || 0)}</b></div><div class="metric"><span>${en ? "Responsibility" : "Su parte"}</span><b>${money(share[memberId] || 0)}</b></div><div class="metric"><span>${en ? "Payments made" : "Pagos hechos"}</span><b>${money(paymentsOut[memberId] || 0)}</b></div><div class="metric"><span>${en ? "Current balance" : "Saldo actual"}</span><b class="${(balances[memberId] || 0) >= 0 ? "positive" : "negative"}">${(balances[memberId] || 0) >= 0 ? "+" : ""}${money(balances[memberId] || 0)}</b></div></div></section><section class="section keep"><h2>${en ? "Who pays whom" : "Quién paga a quién"}</h2>${transfersHTML(mine, en)}</section><section class="section"><h2>${en ? "Expense detail" : "Detalle de gastos"}</h2>${reportExpenseRows(all, en)}</section><section class="section page-break"><h2>${en ? "Receipts & invoices" : "Comprobantes y facturas"}</h2><div class="receipt-grid">${receipts}</div></section>`;
   return proReportShell(body, en ? `${m.name} · Member Report` : `${m.name} · Reporte individual`, monthLabel(activeMonth), en);

@@ -292,11 +292,18 @@
 
     <!-- ============ SALDOS ============ -->
     <div id="balancesPage" class="page">
-      <div class="page-head"><div><span class="eyebrow">ENTRE LA FAMILIA</span><h2>Saldos</h2><p class="muted">La menor cantidad posible de transferencias. Cada pago registrado se descuenta solo.</p></div><div class="head-actions"><button class="primary small write-only" id="balancesRecordPayment" type="button"><svg class="ic"><use href="#i-plus"/></svg>Registrar pago</button></div></div>
+      <div class="page-head"><div><span class="eyebrow">ENTRE LA FAMILIA</span><h2>Saldos</h2><p class="muted">Quién le debe a quién este mes. Cada pago registrado se descuenta solo.</p></div><div class="head-actions"><button class="primary small write-only" id="balancesRecordPayment" type="button"><svg class="ic"><use href="#i-plus"/></svg>Registrar pago</button></div></div>
       <div class="stat-row">
         <div class="stat stat-good"><span>Te deben</span><b class="money" id="balancesReceivable">—</b></div>
         <div class="stat stat-bad"><span>Tú debes</span><b class="money" id="balancesPayable">—</b></div>
         <div class="stat"><span>Pagado este mes</span><b class="money" id="balancesPaidMonth">—</b></div>
+      </div>
+      <div class="balance-mode">
+        <div class="segmented" role="tablist" aria-label="Cómo mostrar los saldos">
+          <button type="button" class="active" data-balance-mode="direct" role="tab" aria-selected="true">Deudas directas</button>
+          <button type="button" data-balance-mode="simplified" role="tab" aria-selected="false">Simplificar pagos</button>
+        </div>
+        <p class="muted small" id="balanceModeText"></p>
       </div>
       <div id="settlementList" class="flow-list"></div>
       <section id="previousBalances" class="card prev-balances hidden"></section>

@@ -1,7 +1,12 @@
-# Mi Casa V10
+# Mi Casa V10.1
 
 Finanzas compartidas de la casa: gastos, cuentas por pagar, saldos entre la familia, metas y cierre de mes.
 Vanilla JS + Firebase (Auth + Firestore), servida desde GitHub Pages. Pasos de publicación en **DEPLOY.md**.
+
+## V10.1 (19 oct 2026)
+- **Saldos con deudas directas por defecto:** cada quien le paga a quien puso el dinero por él (misma división y cobertura de siempre; solo se cruza dentro de cada pareja). Cada tarjeta dice de qué gastos sale.
+- **«Simplificar pagos»** muestra la versión anterior (deudas cruzadas entre todos para hacer menos transferencias). Cada teléfono recuerda su elección.
+- «Te deben» y «Tú debes» (Inicio y Saldos), Hoy, el cierre de mes y el PDF usan la vista elegida.
 
 ## Qué cambió desde V9.5.5
 
